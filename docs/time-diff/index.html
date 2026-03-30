@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>시간 차 계산기 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+  </head>
+  <body>
+    <div class="page">
+      <a class="back" href="../">← 목록</a>
+      <h1>시간 차 계산기</h1>
+      <p class="lead">시각 B − 시각 A 를 계산합니다. 로컬 타임존 기준입니다.</p>
+
+      <form class="form" id="form" novalidate>
+        <div class="field">
+          <label for="a">시각 A</label>
+          <input
+            id="a"
+            name="a"
+            type="text"
+            autocomplete="off"
+            placeholder="2026-03-30 14:30:00 또는 14:30:00"
+          />
+          <p class="hint">YYYY-MM-DD HH:MM:SS 또는 HH:MM:SS</p>
+        </div>
+        <div class="field">
+          <label for="b">시각 B</label>
+          <input
+            id="b"
+            name="b"
+            type="text"
+            autocomplete="off"
+            placeholder="2026-03-31 09:00:00 또는 09:00:00"
+          />
+          <p class="hint">형식은 A와 같게 맞추거나, 한쪽만 날짜를 쓸 수 있습니다.</p>
+        </div>
+        <button type="submit" class="primary">계산</button>
+      </form>
+
+      <p id="error" class="error" hidden></p>
+      <p id="result" class="result" hidden></p>
+      <p id="resultMeta" class="result-meta" hidden></p>
+
+      <div class="help">
+        <strong>해석 규칙</strong>
+        <ul>
+          <li>날짜·시각 형식은 로컬 타임존으로 해석됩니다.</li>
+          <li>둘 다 시간만(HH:MM:SS)이면 오늘 날짜에 붙입니다. 같은 날 기준으로 B가 A보다 이전이면 B는 다음 날로 간주합니다.</li>
+          <li>한쪽만 날짜가 있으면, 시간만인 쪽은 상대쪽의 날짜에 붙입니다. A에만 날짜가 있고 B가 더 이른 시각이면 B는 그 다음 날로 간주합니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var FULL = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/;
+        var TIME = /^(\d{2}):(\d{2}):(\d{2})$/;
+
+        function parseHms(h, mi, s) {
+          h = +h;
+          mi = +mi;
+          s = +s;
+          if (h > 23 || mi > 59 || s > 59) return null;
+          return { h: h, m: mi, s: s };
+        }
+
+        function parseFull(str) {
+          var m = str.match(FULL);
+          if (!m) return null;
+          var y = +m[1],
+            mo = +m[2],
+            d = +m[3];
+          var t = parseHms(m[4], m[5], m[6]);
+          if (!t || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+          var dt = new Date(y, mo - 1, d, t.h, t.m, t.s);
+          if (
+            dt.getFullYear() !== y ||
+            dt.getMonth() !== mo - 1 ||
+            dt.getDate() !== d ||
+            dt.getHours() !== t.h ||
+            dt.getMinutes() !== t.m ||
+            dt.getSeconds() !== t.s
+          )
+            return null;
+          return dt;
+        }
+
+        function parseTimeOnly(str) {
+          var m = str.match(TIME);
+          if (!m) return null;
+          return parseHms(m[1], m[2], m[3]);
+        }
+
+        function todayYmd() {
+          var n = new Date();
+          return {
+            y: n.getFullYear(),
+            mo: n.getMonth(),
+            d: n.getDate(),
+          };
+        }
+
+        function combineDateTime(y, moZero, d, hms) {
+          return new Date(y, moZero, d, hms.h, hms.m, hms.s);
+        }
+
+        function addDays(date, days) {
+          var c = new Date(date.getTime());
+          c.setDate(c.getDate() + days);
+          return c;
+        }
+
+        function detect(s) {
+          var f = parseFull(s);
+          if (f) return { kind: "full", date: f };
+          var t = parseTimeOnly(s);
+          if (t) return { kind: "time", hms: t };
+          return null;
+        }
+
+        function resolve(aStr, bStr) {
+          var da = detect(aStr);
+          var db = detect(bStr);
+          if (!da || !db) {
+            return {
+              ok: false,
+              message:
+                "형식이 올바르지 않습니다. YYYY-MM-DD HH:MM:SS 또는 HH:MM:SS 를 사용하세요.",
+            };
+          }
+
+          var aDate;
+          var bDate;
+
+          if (da.kind === "full" && db.kind === "full") {
+            aDate = da.date;
+            bDate = db.date;
+          } else if (da.kind === "time" && db.kind === "time") {
+            var t = todayYmd();
+            aDate = combineDateTime(t.y, t.mo, t.d, da.hms);
+            bDate = combineDateTime(t.y, t.mo, t.d, db.hms);
+            if (bDate.getTime() < aDate.getTime())
+              bDate = addDays(bDate, 1);
+          } else if (da.kind === "full" && db.kind === "time") {
+            aDate = da.date;
+            var y = aDate.getFullYear(),
+              mo = aDate.getMonth(),
+              d = aDate.getDate();
+            bDate = combineDateTime(y, mo, d, db.hms);
+            if (bDate.getTime() < aDate.getTime())
+              bDate = addDays(bDate, 1);
+          } else {
+            bDate = db.date;
+            var y2 = bDate.getFullYear(),
+              mo2 = bDate.getMonth(),
+              d2 = bDate.getDate();
+            aDate = combineDateTime(y2, mo2, d2, da.hms);
+          }
+
+          return { ok: true, a: aDate, b: bDate };
+        }
+
+        function formatDuration(ms) {
+          var sign = ms >= 0 ? 1 : -1;
+          var abs = Math.abs(ms);
+          var day = 86400000;
+          var hour = 3600000;
+          var minute = 60000;
+          var second = 1000;
+          var days = Math.floor(abs / day);
+          abs -= days * day;
+          var hours = Math.floor(abs / hour);
+          abs -= hours * hour;
+          var minutes = Math.floor(abs / minute);
+          abs -= minutes * minute;
+          var seconds = abs / second;
+          var parts = [];
+          if (days) parts.push(days + "일");
+          if (hours) parts.push(hours + "시간");
+          if (minutes) parts.push(minutes + "분");
+          if (seconds !== 0 || parts.length === 0) {
+            var s =
+              seconds % 1 === 0
+                ? String(seconds)
+                : seconds.toFixed(3).replace(/\.?0+$/, "");
+            parts.push(s + "초");
+          }
+          var body = parts.join(" ");
+          return (sign >= 0 ? "+" : "−") + body;
+        }
+
+        var form = document.getElementById("form");
+        var errEl = document.getElementById("error");
+        var resEl = document.getElementById("result");
+        var metaEl = document.getElementById("resultMeta");
+
+        function showError(msg) {
+          errEl.textContent = msg;
+          errEl.hidden = false;
+          resEl.hidden = true;
+          metaEl.hidden = true;
+        }
+
+        function showResult(ms) {
+          errEl.hidden = true;
+          resEl.textContent = "B − A = " + formatDuration(ms);
+          resEl.hidden = false;
+          var sec = ms / 1000;
+          metaEl.textContent =
+            "총 " +
+            (Math.abs(sec) >= 1e6
+              ? sec.toExponential(6) + " 초"
+              : (Number.isInteger(sec) ? sec : sec.toFixed(3)) + " 초") +
+            " (" +
+            ms +
+            " ms)";
+          metaEl.hidden = false;
+        }
+
+        function run() {
+          var a = document.getElementById("a").value.trim();
+          var b = document.getElementById("b").value.trim();
+          if (!a || !b) {
+            showError("시각 A와 B를 모두 입력하세요.");
+            return;
+          }
+          var r = resolve(a, b);
+          if (!r.ok) {
+            showError(r.message);
+            return;
+          }
+          showResult(r.b.getTime() - r.a.getTime());
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          run();
+        });
+      })();
+    </script>
+  </body>
+</html>
