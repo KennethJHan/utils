@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>퍼센트 증감 계산기 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+  </head>
+  <body>
+    <div class="page">
+      <a class="back" href="../">← 목록</a>
+      <h1>퍼센트 증감 계산기</h1>
+      <p class="lead">
+        기준값 A에서 값 B로 바뀔 때, 상대적으로 몇 % 늘었거나 줄었는지 계산합니다.
+      </p>
+
+      <form class="form" id="form" novalidate>
+        <div class="field">
+          <label for="a">기준값 A</label>
+          <input
+            id="a"
+            name="a"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="예: 100"
+          />
+          <p class="hint">시작·이전 값 (분모)</p>
+        </div>
+        <div class="field">
+          <label for="b">값 B</label>
+          <input
+            id="b"
+            name="b"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="예: 125"
+          />
+          <p class="hint">나중·결과 값</p>
+        </div>
+        <button type="submit" class="primary">계산</button>
+      </form>
+
+      <p id="error" class="error" hidden></p>
+      <p id="result" class="result" hidden></p>
+      <p id="resultMeta" class="result-meta" hidden></p>
+
+      <div class="help">
+        <strong>계산식</strong>
+        <ul>
+          <li>변화율(%) = ((B − A) ÷ A) × 100</li>
+          <li>A가 0이고 B가 0이 아니면 나눗셈이 되지 않아 계산할 수 없습니다.</li>
+          <li>A와 B가 모두 0이면 변화율은 0%로 봅니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        function parseNum(str) {
+          var s = String(str).trim().replace(/\s+/g, "");
+          if (s === "") return NaN;
+          var n = Number(s);
+          return n;
+        }
+
+        function formatNumber(n) {
+          if (!isFinite(n)) return String(n);
+          if (Object.is(n, -0)) return "0";
+          var abs = Math.abs(n);
+          if (abs !== 0 && (abs >= 1e15 || abs < 1e-6))
+            return n.toExponential(6).replace(/\.?0+e/, "e");
+          var t = n.toFixed(10).replace(/\.?0+$/, "");
+          return t === "-0" ? "0" : t;
+        }
+
+        function formatPct(p) {
+          if (!isFinite(p)) return String(p);
+          var abs = Math.abs(p);
+          var digits =
+            abs !== 0 && (abs >= 1e8 || abs < 1e-4) ? 6 : 4;
+          var s = p.toFixed(digits).replace(/\.?0+$/, "");
+          if (s === "-0") s = "0";
+          return s;
+        }
+
+        var form = document.getElementById("form");
+        var errEl = document.getElementById("error");
+        var resEl = document.getElementById("result");
+        var metaEl = document.getElementById("resultMeta");
+
+        function showError(msg) {
+          errEl.textContent = msg;
+          errEl.hidden = false;
+          resEl.hidden = true;
+          metaEl.hidden = true;
+        }
+
+        function showResult(pct, delta, a, b) {
+          errEl.hidden = true;
+          var sign = pct > 0 ? "+" : pct < 0 ? "−" : "";
+          var absPct = Math.abs(pct);
+          var label =
+            pct > 0 ? "증가" : pct < 0 ? "감소" : "변화 없음";
+          var pctStr = formatPct(absPct);
+          resEl.textContent =
+            "A → B: " +
+            sign +
+            pctStr +
+            "% (" +
+            label +
+            ")";
+          metaEl.textContent =
+            "B − A = " +
+            (delta >= 0 ? "+" : "−") +
+            formatNumber(Math.abs(delta)) +
+            "  (A = " +
+            formatNumber(a) +
+            ", B = " +
+            formatNumber(b) +
+            ")";
+          metaEl.hidden = false;
+          resEl.hidden = false;
+        }
+
+        function run() {
+          var a = parseNum(document.getElementById("a").value);
+          var b = parseNum(document.getElementById("b").value);
+          if (document.getElementById("a").value.trim() === "" ||
+              document.getElementById("b").value.trim() === "") {
+            showError("A와 B를 모두 입력하세요.");
+            return;
+          }
+          if (!isFinite(a) || !isFinite(b)) {
+            showError("숫자로 해석할 수 없습니다.");
+            return;
+          }
+          if (a === 0 && b !== 0) {
+            showError(
+              "기준값 A가 0일 때는 퍼센트 증감을 계산할 수 없습니다."
+            );
+            return;
+          }
+          if (a === 0 && b === 0) {
+            showResult(0, 0, a, b);
+            return;
+          }
+          var pct = ((b - a) / a) * 100;
+          var delta = b - a;
+          showResult(pct, delta, a, b);
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          run();
+        });
+      })();
+    </script>
+  </body>
+</html>
