@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>다집합 Venn — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+  </head>
+  <body>
+    <div class="page page--split">
+      <a class="back" href="../">← 목록</a>
+      <h1>다집합 Venn (텍스트 입력)</h1>
+      <p class="lead">
+        위에서부터 내용이 있는 입력란만 집합으로 사용합니다. 한 줄에 하나의 항목이며, 같은
+        집합 안에서는 중복이 제거됩니다. 2·3·4집합은 <strong>항상 같은 모양</strong>의
+        고정 벤 다이어그램이며, 항목 수와 관계없이 원 크기·위치는 바뀌지 않습니다. 각
+        영역에는 개수와 전체 대비 비율(%)이 표시되고, 비어 있으면 0입니다. 영역을 클릭하면
+        아래에 해당 항목이 채워집니다.
+      </p>
+
+      <div class="split">
+        <div class="split__inputs">
+          <div class="form" style="gap: 1rem">
+            <div class="field" data-slot="0">
+              <label for="t0">집합 1</label>
+              <textarea id="t0" rows="4" spellcheck="false" placeholder="한 줄에 하나"></textarea>
+              <p class="hint">고유 항목 <span class="count-badge" id="c0">0</span></p>
+            </div>
+            <div class="field" data-slot="1">
+              <label for="t1">집합 2</label>
+              <textarea id="t1" rows="4" spellcheck="false" placeholder="한 줄에 하나"></textarea>
+              <p class="hint">고유 항목 <span class="count-badge" id="c1">0</span></p>
+            </div>
+            <div class="field" data-slot="2">
+              <label for="t2">집합 3</label>
+              <textarea id="t2" rows="4" spellcheck="false" placeholder="한 줄에 하나"></textarea>
+              <p class="hint">고유 항목 <span class="count-badge" id="c2">0</span></p>
+            </div>
+            <div class="field" data-slot="3">
+              <label for="t3">집합 4</label>
+              <textarea id="t3" rows="4" spellcheck="false" placeholder="한 줄에 하나"></textarea>
+              <p class="hint">고유 항목 <span class="count-badge" id="c3">0</span></p>
+            </div>
+            <div class="field">
+              <label for="out">선택 영역 항목 (편집·복사 가능)</label>
+              <textarea id="out" rows="6" spellcheck="false" placeholder="다이어그램 또는 표에서 영역을 선택하세요."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="split__viz">
+          <div class="venn-wrap" id="venn-root" aria-live="polite"></div>
+          <p class="venn-placeholder" id="venn-placeholder" hidden></p>
+          <div class="venn-table-wrap" id="venn-table-wrap" hidden>
+            <h2>네 집합: 영역 목록 (다이어그램과 동일한 고정 레이아웃 기준)</h2>
+            <table class="venn-table" id="venn-table">
+              <thead>
+                <tr>
+                  <th>영역</th>
+                  <th>개수</th>
+                  <th>비율</th>
+                </tr>
+              </thead>
+              <tbody id="venn-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="help">
+        <strong>참고</strong>
+        <ul>
+          <li>집합이 두 개 미만이면 다이어그램 대신 안내만 표시됩니다.</li>
+          <li>입력을 바꾸면 선택 항목 창은 비워집니다.</li>
+          <li>동일한 문자열이 여러 집합에 있으면 교집합에 포함됩니다.</li>
+          <li>
+            비율(%)은 고유 항목 전체 수(각 문자열은 한 번만 센 합계)에 대한 해당 영역
+            개수 비율입니다.
+          </li>
+          <li>
+            다이어그램은 원을 다각형으로 근사해 영역을 계산합니다. 모양은 데이터와
+            무관하게 고정입니다.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <script src="vendor/polygon-clipping.umd.js"></script>
+    <script>
+      (function () {
+        var PALETTE = ["#4c8eda", "#e89c55", "#5cb87a", "#d65a5a"];
+        var STROKE = "#5a6b85";
+
+        /** 고정 레이아웃 (viewBox 좌표). 항목 수와 무관하게 동일. */
+        var FIXED_LAYOUT = {
+          2: [
+            { x: 152, y: 150, r: 92 },
+            { x: 268, y: 150, r: 92 },
+          ],
+          3: [
+            { x: 240, y: 128, r: 98 },
+            { x: 156, y: 270, r: 98 },
+            { x: 324, y: 270, r: 98 },
+          ],
+          4: [
+            { x: 240, y: 118, r: 86 },
+            { x: 128, y: 228, r: 86 },
+            { x: 352, y: 228, r: 86 },
+            { x: 240, y: 318, r: 86 },
+          ],
+        };
+        var VIEW_BOX = {
+          2: { w: 420, h: 300 },
+          3: { w: 480, h: 380 },
+          4: { w: 480, h: 420 },
+        };
+        var CIRCLE_SEGS = 72;
+        var textareas = [
+          document.getElementById("t0"),
+          document.getElementById("t1"),
+          document.getElementById("t2"),
+          document.getElementById("t3"),
+        ];
+        var outEl = document.getElementById("out");
+        var vennRoot = document.getElementById("venn-root");
+        var placeholder = document.getElementById("venn-placeholder");
+        var tableWrap = document.getElementById("venn-table-wrap");
+        var tbody = document.getElementById("venn-tbody");
+
+        var selectedMask = null;
+        var lastMaskToItems = {};
+        var lastActive = [];
+
+        function parseLines(text) {
+          var seen = {};
+          var out = [];
+          String(text)
+            .split(/\r?\n/)
+            .forEach(function (line) {
+              line = line.trim();
+              if (!line) return;
+              if (seen[line]) return;
+              seen[line] = true;
+              out.push(line);
+            });
+          return out;
+        }
+
+        function buildActive() {
+          var active = [];
+          for (var i = 0; i < 4; i++) {
+            var items = parseLines(textareas[i].value);
+            if (items.length) active.push({ physical: i, items: items });
+          }
+          return active;
+        }
+
+        function buildMaskMap(active) {
+          var union = {};
+          active.forEach(function (a, li) {
+            a.items.forEach(function (s) {
+              if (!union[s]) union[s] = 0;
+              union[s] |= 1 << li;
+            });
+          });
+          var maskToItems = {};
+          Object.keys(union).forEach(function (s) {
+            var m = union[s];
+            if (!maskToItems[m]) maskToItems[m] = [];
+            maskToItems[m].push(s);
+          });
+          Object.keys(maskToItems).forEach(function (m) {
+            maskToItems[m].sort();
+          });
+          return maskToItems;
+        }
+
+        function totalItemCount(maskToItems, n) {
+          var t = 0;
+          for (var mask = 1; mask < 1 << n; mask++) {
+            t += maskToItems[mask] ? maskToItems[mask].length : 0;
+          }
+          return t;
+        }
+
+        function formatPctOfTotal(count, total) {
+          if (total <= 0) return "0";
+          var p = (100 * count) / total;
+          if (Math.abs(p - Math.round(p)) < 1e-9) return String(Math.round(p));
+          return p.toFixed(1);
+        }
+
+        function maskLabel(mask, active) {
+          var parts = [];
+          for (var i = 0; i < active.length; i++) {
+            if (mask & (1 << i))
+              parts.push("집합 " + (active[i].physical + 1));
+          }
+          return parts.length ? parts.join(" ∩ ") : "—";
+        }
+
+        function circlePoly(cx, cy, r, segs) {
+          var ring = [];
+          for (var i = 0; i < segs; i++) {
+            var t = (i / segs) * Math.PI * 2;
+            ring.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]);
+          }
+          ring.push(ring[0]);
+          return [[ring]];
+        }
+
+        function regionMultiPolygon(circles, n, mask) {
+          var pc = window.polygonClipping;
+          var ins = [];
+          var outs = [];
+          for (var i = 0; i < n; i++) {
+            var poly = circlePoly(
+              circles[i].x,
+              circles[i].y,
+              circles[i].r,
+              CIRCLE_SEGS
+            );
+            if (mask & (1 << i)) ins.push(poly);
+            else outs.push(poly);
+          }
+          var inner = ins[0];
+          for (var j = 1; j < ins.length; j++) {
+            inner = pc.intersection(inner, ins[j]);
+          }
+          if (!outs.length) return inner;
+          var outerU = outs[0];
+          for (var k = 1; k < outs.length; k++) {
+            outerU = pc.union(outerU, outs[k]);
+          }
+          return pc.difference(inner, outerU);
+        }
+
+        function multiPolyToPath(mp) {
+          if (!mp || !mp.length) return "";
+          var parts = [];
+          mp.forEach(function (poly) {
+            poly.forEach(function (ring) {
+              if (!ring || ring.length < 2) return;
+              parts.push("M" + ring[0][0] + "," + ring[0][1]);
+              for (var i = 1; i < ring.length; i++) {
+                parts.push("L" + ring[i][0] + "," + ring[i][1]);
+              }
+              parts.push("Z");
+            });
+          });
+          return parts.join("");
+        }
+
+        function ringCentroid(ring) {
+          if (!ring || ring.length < 2) return null;
+          var m = ring.length;
+          if (
+            ring[0][0] === ring[m - 1][0] &&
+            ring[0][1] === ring[m - 1][1]
+          )
+            m--;
+          if (m < 1) return null;
+          var sx = 0,
+            sy = 0;
+          for (var i = 0; i < m; i++) {
+            sx += ring[i][0];
+            sy += ring[i][1];
+          }
+          return [sx / m, sy / m];
+        }
+
+        function centroidFromMultiPoly(mp) {
+          if (!mp || !mp.length || !mp[0].length) return null;
+          return ringCentroid(mp[0][0]);
+        }
+
+        function fallbackLabelPos(circles, n, mask) {
+          var sx = 0,
+            sy = 0,
+            k = 0;
+          for (var i = 0; i < n; i++) {
+            if (mask & (1 << i)) {
+              sx += circles[i].x;
+              sy += circles[i].y;
+              k++;
+            }
+          }
+          if (k) return [sx / k, sy / k];
+          return [VIEW_BOX[n].w / 2, VIEW_BOX[n].h / 2];
+        }
+
+        function clearSelectionVisual() {
+          if (tbody) {
+            tbody.querySelectorAll("tr.is-active").forEach(function (tr) {
+              tr.classList.remove("is-active");
+            });
+          }
+        }
+
+        function setOutputForMask(mask) {
+          var items = lastMaskToItems[mask] || [];
+          outEl.value = items.join("\n");
+          selectedMask = mask;
+        }
+
+        function onRegionClick(mask) {
+          clearSelectionVisual();
+          setOutputForMask(mask);
+          var tr = tbody.querySelector('tr[data-mask="' + mask + '"]');
+          if (tr) tr.classList.add("is-active");
+        }
+
+        function clearOutput() {
+          outEl.value = "";
+          selectedMask = null;
+          clearSelectionVisual();
+        }
+
+        function updateCounts() {
+          for (var i = 0; i < 4; i++) {
+            var n = parseLines(textareas[i].value).length;
+            document.getElementById("c" + i).textContent = String(n);
+          }
+        }
+
+        function drawTable(active, maskToItems) {
+          tbody.innerHTML = "";
+          var n = active.length;
+          if (n !== 4) {
+            tableWrap.hidden = true;
+            return;
+          }
+          tableWrap.hidden = false;
+          var total = totalItemCount(maskToItems, n);
+          for (var mask = 1; mask < 16; mask++) {
+            var tr = document.createElement("tr");
+            tr.setAttribute("data-mask", String(mask));
+            var count = maskToItems[mask] ? maskToItems[mask].length : 0;
+            var pctStr = formatPctOfTotal(count, total);
+            tr.innerHTML =
+              "<td>" +
+              maskLabel(mask, active) +
+              "</td><td>" +
+              count +
+              '</td><td class="venn-pct">' +
+              pctStr +
+              "%</td>";
+            tr.addEventListener(
+              "click",
+              (function (m) {
+                return function () {
+                  onRegionClick(m);
+                };
+              })(mask)
+            );
+            tbody.appendChild(tr);
+          }
+        }
+
+        function drawVenn(active, maskToItems) {
+          vennRoot.innerHTML = "";
+          placeholder.hidden = true;
+          vennRoot.hidden = false;
+
+          var n = active.length;
+          if (n < 2) {
+            vennRoot.hidden = true;
+            placeholder.hidden = false;
+            placeholder.textContent =
+              n === 0
+                ? "항목이 있는 집합을 두 개 이상 입력해 주세요."
+                : "집합이 하나뿐입니다. 비교하려면 다른 집합에도 항목을 넣어 주세요.";
+            return;
+          }
+
+          var circles = FIXED_LAYOUT[n];
+          var vb = VIEW_BOX[n];
+          var total = totalItemCount(maskToItems, n);
+          var ns = "http://www.w3.org/2000/svg";
+          var svg = document.createElementNS(ns, "svg");
+          svg.setAttribute("viewBox", "0 0 " + vb.w + " " + vb.h);
+          svg.setAttribute("width", "100%");
+          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+          svg.setAttribute("class", "venn-fixed-svg");
+
+          var gFill = document.createElementNS(ns, "g");
+          var gHit = document.createElementNS(ns, "g");
+          var gLbl = document.createElementNS(ns, "g");
+          var gRing = document.createElementNS(ns, "g");
+
+          var fs = n >= 4 ? 10 : 11;
+
+          for (var mask = 1; mask < 1 << n; mask++) {
+            var count = maskToItems[mask] ? maskToItems[mask].length : 0;
+            var pctStr = formatPctOfTotal(count, total);
+            var labelText = count + " (" + pctStr + "%)";
+            var mp = null;
+            var pathD = "";
+            try {
+              mp = regionMultiPolygon(circles, n, mask);
+              pathD = multiPolyToPath(mp);
+            } catch (err) {
+              console.warn("venn region", mask, err);
+            }
+
+            var pos = pathD
+              ? centroidFromMultiPoly(mp) || fallbackLabelPos(circles, n, mask)
+              : fallbackLabelPos(circles, n, mask);
+            var fillCol = PALETTE[(mask - 1) % PALETTE.length];
+
+            if (pathD) {
+              var path = document.createElementNS(ns, "path");
+              path.setAttribute("d", pathD);
+              path.setAttribute("fill", fillCol);
+              path.setAttribute("fill-opacity", "0.32");
+              path.setAttribute("fill-rule", "evenodd");
+              path.setAttribute("stroke", "none");
+              path.setAttribute("data-mask", String(mask));
+              gFill.appendChild(path);
+
+              var pathHit = document.createElementNS(ns, "path");
+              pathHit.setAttribute("d", pathD);
+              pathHit.setAttribute("fill", "rgba(0,0,0,0.01)");
+              pathHit.setAttribute("fill-rule", "evenodd");
+              pathHit.setAttribute("stroke", "none");
+              pathHit.style.cursor = "pointer";
+              pathHit.setAttribute("data-mask", String(mask));
+              pathHit.addEventListener("click", function (m) {
+                return function () {
+                  onRegionClick(m);
+                };
+              }(mask));
+              gHit.appendChild(pathHit);
+            } else {
+              var cHit = document.createElementNS(ns, "circle");
+              cHit.setAttribute("cx", String(pos[0]));
+              cHit.setAttribute("cy", String(pos[1]));
+              cHit.setAttribute("r", "20");
+              cHit.setAttribute("fill", "rgba(0,0,0,0.02)");
+              cHit.style.cursor = "pointer";
+              cHit.setAttribute("data-mask", String(mask));
+              cHit.addEventListener("click", function (m) {
+                return function () {
+                  onRegionClick(m);
+                };
+              }(mask));
+              gHit.appendChild(cHit);
+            }
+
+            var txt = document.createElementNS(ns, "text");
+            txt.setAttribute("x", String(pos[0]));
+            txt.setAttribute("y", String(pos[1]));
+            txt.setAttribute("text-anchor", "middle");
+            txt.setAttribute("dominant-baseline", "middle");
+            txt.setAttribute("fill", "#e7ecf3");
+            txt.setAttribute("font-size", String(fs));
+            txt.setAttribute("font-weight", "600");
+            txt.setAttribute("pointer-events", "none");
+            txt.textContent = labelText;
+            gLbl.appendChild(txt);
+          }
+
+          circles.forEach(function (c) {
+            var ring = document.createElementNS(ns, "circle");
+            ring.setAttribute("cx", String(c.x));
+            ring.setAttribute("cy", String(c.y));
+            ring.setAttribute("r", String(c.r));
+            ring.setAttribute("fill", "none");
+            ring.setAttribute("stroke", STROKE);
+            ring.setAttribute("stroke-width", "2");
+            ring.setAttribute("pointer-events", "none");
+            gRing.appendChild(ring);
+          });
+
+          svg.appendChild(gFill);
+          svg.appendChild(gHit);
+          svg.appendChild(gRing);
+          svg.appendChild(gLbl);
+          vennRoot.appendChild(svg);
+        }
+
+        function refresh() {
+          updateCounts();
+          clearOutput();
+          lastActive = buildActive();
+          lastMaskToItems = buildMaskMap(lastActive);
+          drawTable(lastActive, lastMaskToItems);
+          drawVenn(lastActive, lastMaskToItems);
+        }
+
+        function redrawVizPreserve() {
+          updateCounts();
+          var sm = selectedMask;
+          drawTable(lastActive, lastMaskToItems);
+          drawVenn(lastActive, lastMaskToItems);
+          if (sm != null) onRegionClick(sm);
+        }
+
+        var tmo;
+        function schedule() {
+          clearTimeout(tmo);
+          tmo = setTimeout(refresh, 180);
+        }
+
+        var resizeT;
+        function scheduleResize() {
+          clearTimeout(resizeT);
+          resizeT = setTimeout(function () {
+            if (lastActive.length >= 2) redrawVizPreserve();
+          }, 200);
+        }
+
+        textareas.forEach(function (ta) {
+          ta.addEventListener("input", schedule);
+        });
+
+        window.addEventListener("resize", scheduleResize);
+
+        refresh();
+        requestAnimationFrame(function () {
+          requestAnimationFrame(redrawVizPreserve);
+        });
+      })();
+    </script>
+  </body>
+</html>

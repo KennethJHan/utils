@@ -43,6 +43,130 @@ a:hover {
   padding: 2rem 1.25rem 3rem;
 }
 
+.page--split {
+  max-width: 72rem;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.split__viz {
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .split__viz {
+    position: static;
+  }
+}
+
+.venn-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.75rem;
+  min-height: 200px;
+  overflow: auto;
+}
+
+.venn-wrap svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.venn-wrap .venn-area path {
+  stroke: var(--border);
+  stroke-width: 1.5px;
+  cursor: pointer;
+}
+
+.venn-wrap .venn-area path:hover {
+  fill-opacity: 0.45 !important;
+}
+
+.venn-wrap .venn-area .label {
+  fill: var(--text);
+  pointer-events: none;
+  font-weight: 600;
+}
+
+.venn-placeholder {
+  margin: 0;
+  padding: 1.25rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.venn-table-wrap {
+  margin-top: 1rem;
+}
+
+.venn-table-wrap h2 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+}
+
+.venn-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.venn-table th,
+.venn-table td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+
+.venn-table th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.venn-table tbody tr {
+  cursor: pointer;
+}
+
+.venn-table tbody tr:hover {
+  background: rgba(108, 179, 255, 0.08);
+}
+
+.venn-table tbody tr.is-active {
+  background: rgba(108, 179, 255, 0.15);
+}
+
+.venn-table td.venn-pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.count-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(108, 179, 255, 0.12);
+  border-radius: 6px;
+}
+
 h1 {
   font-size: 1.5rem;
   font-weight: 600;
@@ -118,6 +242,26 @@ h1 {
 }
 
 .field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(108, 179, 255, 0.25);
+}
+
+.field textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 0.65rem 0.85rem;
+  font-family: ui-monospace, "Cascadia Code", "Noto Sans Mono", monospace;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.field textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(108, 179, 255, 0.25);
