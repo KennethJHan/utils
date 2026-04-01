@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>시간 단위 변환 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+    <style>
+      .time-convert__row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+      }
+      .time-convert__row .field {
+        flex: 1;
+        min-width: 5rem;
+      }
+      .time-convert__sep {
+        padding-bottom: 0.65rem;
+        color: var(--muted);
+        font-weight: 500;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <a class="back" href="../">← 목록</a>
+      <h1>시간 단위 변환</h1>
+      <p class="lead">
+        같은 길이를 초 · 분+초 · 시+분+초 · 일+시+분+초로 서로 바꿉니다. 한쪽을 고치면 나머지가
+        맞춰 갱신됩니다.
+      </p>
+
+      <form class="form" id="form" novalidate>
+        <div class="field">
+          <label for="sec">초</label>
+          <input
+            id="sec"
+            name="sec"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="예: 3661 또는 90.5"
+            data-group="sec"
+          />
+          <p class="hint">총 초(정수·소수)</p>
+        </div>
+
+        <div class="field">
+          <span id="label-minsec">분 · 초</span>
+          <div class="time-convert__row" role="group" aria-labelledby="label-minsec">
+            <div class="field">
+              <label for="min" class="hint" style="margin-bottom: 0.35rem">분</label>
+              <input
+                id="min"
+                name="min"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="61"
+                data-group="minsec"
+              />
+            </div>
+            <span class="time-convert__sep" aria-hidden="true">:</span>
+            <div class="field">
+              <label for="sec2" class="hint" style="margin-bottom: 0.35rem">초</label>
+              <input
+                id="sec2"
+                name="sec2"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="1"
+                data-group="minsec"
+              />
+            </div>
+          </div>
+          <p class="hint">총 분 × 60 + 초 (표시는 0–59초로 맞춤)</p>
+        </div>
+
+        <div class="field">
+          <span id="label-hms">시 · 분 · 초</span>
+          <div class="time-convert__row" role="group" aria-labelledby="label-hms">
+            <div class="field">
+              <label for="h" class="hint" style="margin-bottom: 0.35rem">시</label>
+              <input
+                id="h"
+                name="h"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="1"
+                data-group="hms"
+              />
+            </div>
+            <span class="time-convert__sep" aria-hidden="true">:</span>
+            <div class="field">
+              <label for="m" class="hint" style="margin-bottom: 0.35rem">분</label>
+              <input
+                id="m"
+                name="m"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="1"
+                data-group="hms"
+              />
+            </div>
+            <span class="time-convert__sep" aria-hidden="true">:</span>
+            <div class="field">
+              <label for="s" class="hint" style="margin-bottom: 0.35rem">초</label>
+              <input
+                id="s"
+                name="s"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="1"
+                data-group="hms"
+              />
+            </div>
+          </div>
+          <p class="hint">시×3600 + 분×60 + 초 (표시는 시·분·초 각각 정규화, 시는 누적 시간)</p>
+        </div>
+
+        <div class="field">
+          <span id="label-dhms">일 · 시 · 분 · 초</span>
+          <div class="time-convert__row" role="group" aria-labelledby="label-dhms">
+            <div class="field">
+              <label for="d" class="hint" style="margin-bottom: 0.35rem">일</label>
+              <input
+                id="d"
+                name="d"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="1"
+                data-group="dhms"
+              />
+            </div>
+            <span class="time-convert__sep" aria-hidden="true">:</span>
+            <div class="field">
+              <label for="dh" class="hint" style="margin-bottom: 0.35rem">시</label>
+              <input
+                id="dh"
+                name="dh"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="2"
+                data-group="dhms"
+              />
+            </div>
+            <span class="time-convert__sep" aria-hidden="true">:</span>
+            <div class="field">
+              <label for="dm" class="hint" style="margin-bottom: 0.35rem">분</label>
+              <input
+                id="dm"
+                name="dm"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="3"
+                data-group="dhms"
+              />
+            </div>
+            <span class="time-convert__sep" aria-hidden="true">:</span>
+            <div class="field">
+              <label for="ds" class="hint" style="margin-bottom: 0.35rem">초</label>
+              <input
+                id="ds"
+                name="ds"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="4"
+                data-group="dhms"
+              />
+            </div>
+          </div>
+          <p class="hint">일×86400 + 시×3600 + 분×60 + 초 (일 아래 시·분·초는 하루 안에서 정규화)</p>
+        </div>
+      </form>
+
+      <p id="error" class="error" hidden></p>
+
+      <div class="help">
+        <strong>동작</strong>
+        <ul>
+          <li>어느 칸이든 입력이 바뀌면, 유효한 숫자로 읽을 수 있을 때 총 초로 환산한 뒤 네 가지 표현을 모두 갱신합니다.</li>
+          <li>분·초는 (분)×60+(초), 시·분·초는 (시)×3600+(분)×60+(초), 일·시·분·초는 일×86400+시×3600+분×60+초로 합산합니다. 빈 칸은 0으로 봅니다.</li>
+          <li>한 그룹의 값을 모두 지우면 나머지 입력도 비웁니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        function parseNum(str) {
+          var s = String(str).trim().replace(/\s+/g, "");
+          if (s === "") return null;
+          var n = Number(s);
+          return isFinite(n) ? n : NaN;
+        }
+
+        function formatScalar(n) {
+          if (!isFinite(n)) return "";
+          if (Object.is(n, -0)) return "0";
+          var abs = Math.abs(n);
+          if (abs !== 0 && (abs >= 1e15 || abs < 1e-9))
+            return n.toExponential(10).replace(/\.?0+e/, "e");
+          var t = n.toFixed(12).replace(/\.?0+$/, "");
+          return t === "-0" ? "0" : t;
+        }
+
+        function formatIntish(n) {
+          if (!isFinite(n)) return "";
+          if (Math.abs(n - Math.round(n)) < 1e-9) return String(Math.round(n));
+          return formatScalar(n);
+        }
+
+        function splitSigned(total) {
+          var sign = total < 0 ? -1 : 1;
+          var abs = Math.abs(total);
+          return { sign: sign, abs: abs };
+        }
+
+        var SEC_PER_DAY = 86400;
+
+        function fromTotal(total) {
+          var x = splitSigned(total);
+          var abs = x.abs;
+          var day = Math.floor(abs / SEC_PER_DAY);
+          var r0 = abs - day * SEC_PER_DAY;
+          var dh = Math.floor(r0 / 3600);
+          var r1 = r0 - dh * 3600;
+          var dmi = Math.floor(r1 / 60);
+          var ds = r1 - dmi * 60;
+
+          var h = Math.floor(abs / 3600);
+          var r1h = abs - h * 3600;
+          var mi = Math.floor(r1h / 60);
+          var s = r1h - mi * 60;
+          var minOnly = Math.floor(abs / 60);
+          var s2 = abs - minOnly * 60;
+          return {
+            sec: formatScalar(x.sign * abs),
+            min: formatIntish(x.sign * minOnly),
+            sec2: formatScalar(x.sign * s2),
+            h: formatIntish(x.sign * h),
+            m: formatIntish(x.sign * mi),
+            s: formatScalar(x.sign * s),
+            d: formatIntish(x.sign * day),
+            dh: formatIntish(x.sign * dh),
+            dm: formatIntish(x.sign * dmi),
+            ds: formatScalar(x.sign * ds),
+          };
+        }
+
+        var secEl = document.getElementById("sec");
+        var minEl = document.getElementById("min");
+        var sec2El = document.getElementById("sec2");
+        var hEl = document.getElementById("h");
+        var mEl = document.getElementById("m");
+        var sEl = document.getElementById("s");
+        var dEl = document.getElementById("d");
+        var dhEl = document.getElementById("dh");
+        var dmEl = document.getElementById("dm");
+        var dsEl = document.getElementById("ds");
+        var errEl = document.getElementById("error");
+
+        var lock = false;
+
+        function showError(msg) {
+          errEl.textContent = msg;
+          errEl.hidden = !msg;
+        }
+
+        function applyValues(v) {
+          lock = true;
+          secEl.value = v.sec;
+          minEl.value = v.min;
+          sec2El.value = v.sec2;
+          hEl.value = v.h;
+          mEl.value = v.m;
+          sEl.value = v.s;
+          dEl.value = v.d;
+          dhEl.value = v.dh;
+          dmEl.value = v.dm;
+          dsEl.value = v.ds;
+          lock = false;
+        }
+
+        function clearAll() {
+          applyValues({
+            sec: "",
+            min: "",
+            sec2: "",
+            h: "",
+            m: "",
+            s: "",
+            d: "",
+            dh: "",
+            dm: "",
+            ds: "",
+          });
+          showError("");
+        }
+
+        function parseSecGroup() {
+          var t = secEl.value.trim();
+          if (t === "") return { empty: true };
+          var n = parseNum(t);
+          if (!isFinite(n)) return { bad: true };
+          return { total: n };
+        }
+
+        function parseMinSecGroup() {
+          var a = minEl.value.trim();
+          var b = sec2El.value.trim();
+          if (a === "" && b === "") return { empty: true };
+          var m = a === "" ? 0 : parseNum(a);
+          var s = b === "" ? 0 : parseNum(b);
+          if (!isFinite(m) || !isFinite(s)) return { bad: true };
+          return { total: m * 60 + s };
+        }
+
+        function parseHmsGroup() {
+          var a = hEl.value.trim();
+          var b = mEl.value.trim();
+          var c = sEl.value.trim();
+          if (a === "" && b === "" && c === "") return { empty: true };
+          var h = a === "" ? 0 : parseNum(a);
+          var m = b === "" ? 0 : parseNum(b);
+          var s = c === "" ? 0 : parseNum(c);
+          if (!isFinite(h) || !isFinite(m) || !isFinite(s)) return { bad: true };
+          return { total: h * 3600 + m * 60 + s };
+        }
+
+        function parseDhmsGroup() {
+          var da = dEl.value.trim();
+          var hb = dhEl.value.trim();
+          var mc = dmEl.value.trim();
+          var sc = dsEl.value.trim();
+          if (da === "" && hb === "" && mc === "" && sc === "") return { empty: true };
+          var day = da === "" ? 0 : parseNum(da);
+          var h = hb === "" ? 0 : parseNum(hb);
+          var m = mc === "" ? 0 : parseNum(mc);
+          var s = sc === "" ? 0 : parseNum(sc);
+          if (!isFinite(day) || !isFinite(h) || !isFinite(m) || !isFinite(s))
+            return { bad: true };
+          return { total: day * SEC_PER_DAY + h * 3600 + m * 60 + s };
+        }
+
+        function syncFrom(group) {
+          if (lock) return;
+          var r;
+          if (group === "sec") r = parseSecGroup();
+          else if (group === "minsec") r = parseMinSecGroup();
+          else if (group === "hms") r = parseHmsGroup();
+          else r = parseDhmsGroup();
+
+          if (r.empty) {
+            clearAll();
+            return;
+          }
+          if (r.bad) {
+            showError("숫자로 읽을 수 없습니다. 형식을 확인해 주세요.");
+            return;
+          }
+          showError("");
+          applyValues(fromTotal(r.total));
+        }
+
+        secEl.addEventListener("input", function () {
+          syncFrom("sec");
+        });
+        minEl.addEventListener("input", function () {
+          syncFrom("minsec");
+        });
+        sec2El.addEventListener("input", function () {
+          syncFrom("minsec");
+        });
+        hEl.addEventListener("input", function () {
+          syncFrom("hms");
+        });
+        mEl.addEventListener("input", function () {
+          syncFrom("hms");
+        });
+        sEl.addEventListener("input", function () {
+          syncFrom("hms");
+        });
+        dEl.addEventListener("input", function () {
+          syncFrom("dhms");
+        });
+        dhEl.addEventListener("input", function () {
+          syncFrom("dhms");
+        });
+        dmEl.addEventListener("input", function () {
+          syncFrom("dhms");
+        });
+        dsEl.addEventListener("input", function () {
+          syncFrom("dhms");
+        });
+
+        document.getElementById("form").addEventListener("submit", function (e) {
+          e.preventDefault();
+        });
+      })();
+    </script>
+  </body>
+</html>
