@@ -50,10 +50,40 @@
         padding: 0.75rem;
         overflow: auto;
       }
-      .boxplot-wrap svg {
+      .boxplot-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .boxplot-toolbar-label {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-right: 0.25rem;
+      }
+      .boxplot-dl {
+        font: inherit;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.55rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .boxplot-dl:hover {
+        border-color: var(--accent);
+        color: var(--accent-hover);
+      }
+      .boxplot-svg-root svg {
         display: block;
         max-width: 100%;
         height: auto;
+      }
+      .field .group-label-input {
+        width: 100%;
+        margin-bottom: 0.4rem;
       }
       .test-block {
         margin-top: 1rem;
@@ -89,13 +119,25 @@
       <h1>기술 통계 · 박스플롯</h1>
       <p class="lead">
         숫자 목록을 넣으면 요약 통계와 박스플롯을 보여 줍니다. 두 번째 칸에도 값이 있으면 두
-        그룹 비교와 검정 결과를 함께 냅니다.
+        그룹 비교와 검정 결과를 함께 냅니다. 각 그래프 위의 <strong>SVG</strong>·<strong>PNG</strong>로
+        저장할 수 있고, 일부 브라우저에서는 그래프 영역을 우클릭해 SVG를 그대로 저장할 수도
+        있습니다.
       </p>
 
       <div class="split">
         <div class="split__inputs">
           <form class="form" id="form" novalidate>
             <div class="field">
+              <label for="groupLabel1">그룹 1 이름 (그래프·표)</label>
+              <input
+                type="text"
+                id="groupLabel1"
+                name="groupLabel1"
+                class="group-label-input"
+                maxlength="80"
+                autocomplete="off"
+                placeholder="비우면 «그룹 1»"
+              />
               <label for="ta1">데이터 1</label>
               <textarea
                 id="ta1"
@@ -107,6 +149,16 @@
               <p class="hint">그룹 A (필수)</p>
             </div>
             <div class="field">
+              <label for="groupLabel2">그룹 2 이름 (그래프·표)</label>
+              <input
+                type="text"
+                id="groupLabel2"
+                name="groupLabel2"
+                class="group-label-input"
+                maxlength="80"
+                autocomplete="off"
+                placeholder="비우면 «그룹 2»"
+              />
               <label for="ta2">데이터 2</label>
               <textarea
                 id="ta2"
@@ -139,6 +191,11 @@
               두 그룹일 때: <strong>Welch t-검정</strong>(분산 불일치 가정 이표본 t)과
               <strong>Mann–Whitney U</strong>(순위합, 연속성 보정·동점 보정 포함)의 근사
               유의확률을 참고용으로 보여 줍니다. 해석은 전제(정규성·독립 등)를 감안해 주세요.
+            </li>
+            <li>
+              같은 축 비교 그림에서 둘 중 하나라도 양측 <em>p</em> &lt; 0.05이면 그룹 사이에
+              <strong>*</strong> 표시가 납니다. 박스플롯은 흰 배경·축 눈금을 쓰는 출판용 스타일이며,
+              SVG/PNG로 내려받을 수 있습니다.
             </li>
           </ul>
         </div>
@@ -442,7 +499,7 @@
 
         function renderTable(title, su) {
           var rows = statsTableRows(su);
-          var h = "<h2>" + title + "</h2><table class='stats-table'><tbody>";
+          var h = "<h2>" + escapeHtml(title) + "</h2><table class='stats-table'><tbody>";
           for (var i = 0; i < rows.length; i++) {
             h +=
               "<tr><th>" +
@@ -460,15 +517,44 @@
           return top + ((vmax - v) / (vmax - vmin)) * (bottom - top);
         }
 
-        function boxplotSvg(groups, labels) {
-          var W = 420;
-          var H = 260;
-          var padL = 44;
-          var padR = 16;
-          var padT = 24;
-          var padB = 48;
+        /** Publication-style ticks (linear, ~5 steps). */
+        function axisTicks(lo, hi) {
+          var span = hi - lo;
+          if (span <= 0) return [lo];
+          var step = Math.pow(10, Math.floor(Math.log(span) / Math.LN10));
+          var err = span / step;
+          if (err >= 7.5) step *= 5;
+          else if (err >= 3.5) step *= 2;
+          var t0 = Math.ceil(lo / step) * step;
+          var out = [];
+          for (var x = t0; x <= hi + step * 0.001; x += step) {
+            if (x >= lo - step * 0.001) out.push(x);
+            if (out.length > 12) break;
+          }
+          if (out.length === 0) out = [lo, hi];
+          if (out.length < 2) {
+            out = [lo, (lo + hi) / 2, hi];
+          }
+          return out;
+        }
+
+        /**
+         * opts: { showStar: boolean } — 두 그룹 비교 시 유의한 검정(p&lt;0.05)이면 그룹 위에 *.
+         */
+        function boxplotSvg(groups, labels, opts) {
+          opts = opts || {};
+          var W = 440;
+          var H = 300;
+          var axisW = 52;
+          var padL = axisW + 8;
+          var padR = 24;
+          var padB = 52;
+          var starBand = opts.showStar ? 26 : 0;
+          var padT = 12 + starBand;
+          var plotTop = padT + 6;
+          var plotBottom = H - padB;
           var plotW = W - padL - padR;
-          var plotH = H - padT - padB;
+
           var gmin = Infinity;
           var gmax = -Infinity;
           for (var g = 0; g < groups.length; g++) {
@@ -482,12 +568,20 @@
             gmax += 1;
           }
           var span = gmax - gmin;
-          gmin -= span * 0.06;
-          gmax += span * 0.06;
+          gmin -= span * 0.05;
+          gmax += span * 0.05;
 
+          var ticks = axisTicks(gmin, gmax);
           var nG = groups.length;
           var colW = plotW / nG;
           var parts = [];
+          var ink = "#1a1a1a";
+          var mutedInk = "#444444";
+          var paper = "#ffffff";
+          var grid = "#e8e8e8";
+          var boxFill = "#d8d8d8";
+          var capW;
+
           parts.push(
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' +
               W +
@@ -499,46 +593,131 @@
               H +
               '" aria-label="박스플롯">'
           );
+          parts.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="' + paper + '"/>');
+
+          for (var ti = 0; ti < ticks.length; ti++) {
+            var tv = ticks[ti];
+            var yy = yScale(tv, gmin, gmax, plotTop, plotBottom);
+            parts.push(
+              '<line x1="' +
+                padL +
+                '" y1="' +
+                yy +
+                '" x2="' +
+                (W - padR) +
+                '" y2="' +
+                yy +
+                '" stroke="' +
+                grid +
+                '" stroke-width="1"/>'
+            );
+          }
+
           parts.push(
             '<line x1="' +
               padL +
               '" y1="' +
-              (H - padB) +
+              plotTop +
+              '" x2="' +
+              padL +
+              '" y2="' +
+              plotBottom +
+              '" stroke="' +
+              ink +
+              '" stroke-width="1.25"/>'
+          );
+          parts.push(
+            '<line x1="' +
+              padL +
+              '" y1="' +
+              plotBottom +
               '" x2="' +
               (W - padR) +
               '" y2="' +
-              (H - padB) +
-              '" stroke="#2d3a4f" stroke-width="1"/>'
+              plotBottom +
+              '" stroke="' +
+              ink +
+              '" stroke-width="1.25"/>'
           );
-          parts.push(
-            '<text x="' +
-              padL +
-              '" y="' +
-              (H - 14) +
-              '" fill="#8b9cb3" font-size="11">' +
-              fmtNum(gmin) +
-              "</text>"
-          );
-          parts.push(
-            '<text x="' +
-              (W - padR) +
-              '" y="' +
-              (H - 14) +
-              '" fill="#8b9cb3" font-size="11" text-anchor="end">' +
-              fmtNum(gmax) +
-              "</text>"
-          );
+
+          for (var tj = 0; tj < ticks.length; tj++) {
+            var tv2 = ticks[tj];
+            var yy2 = yScale(tv2, gmin, gmax, plotTop, plotBottom);
+            parts.push(
+              '<line x1="' +
+                (padL - 5) +
+                '" y1="' +
+                yy2 +
+                '" x2="' +
+                padL +
+                '" y2="' +
+                yy2 +
+                '" stroke="' +
+                ink +
+                '" stroke-width="1.25"/>'
+            );
+            parts.push(
+              '<text x="' +
+                (padL - 8) +
+                '" y="' +
+                (yy2 + 4) +
+                '" fill="' +
+                mutedInk +
+                '" font-size="11" font-family="system-ui,Segoe UI,sans-serif" text-anchor="end">' +
+                escapeHtml(fmtNum(tv2)) +
+                "</text>"
+            );
+          }
+
+          if (opts.showStar && nG === 2) {
+            var cx0 = padL + colW * 0 + colW / 2;
+            var cx1 = padL + colW * 1 + colW / 2;
+            var midX = (cx0 + cx1) / 2;
+            var bracketY = padT - 4;
+            parts.push(
+              '<path d="M ' +
+                cx0 +
+                " " +
+                (bracketY + 6) +
+                " L " +
+                cx0 +
+                " " +
+                bracketY +
+                " L " +
+                cx1 +
+                " " +
+                bracketY +
+                " L " +
+                cx1 +
+                " " +
+                (bracketY + 6) +
+                '" fill="none" stroke="' +
+                ink +
+                '" stroke-width="1"/>'
+            );
+            parts.push(
+              '<text x="' +
+                midX +
+                '" y="' +
+                (bracketY - 2) +
+                '" fill="' +
+                ink +
+                '" font-size="18" font-weight="700" font-family="Times New Roman,Times,serif" text-anchor="middle">*</text>'
+            );
+          }
 
           for (var gi = 0; gi < nG; gi++) {
             var su = groups[gi];
             var cx = padL + colW * gi + colW / 2;
-            var bw = Math.min(48, colW * 0.45);
-            var yQ1 = yScale(su.q1, gmin, gmax, padT, H - padB);
-            var yQ3 = yScale(su.q3, gmin, gmax, padT, H - padB);
-            var yMed = yScale(su.q2, gmin, gmax, padT, H - padB);
-            var yWL = yScale(su.whiskerLow, gmin, gmax, padT, H - padB);
-            var yWH = yScale(su.whiskerHigh, gmin, gmax, padT, H - padB);
-            var acc = "#6cb3ff";
+            var bw = Math.min(44, colW * 0.42);
+            capW = Math.min(bw * 0.55, 14);
+            var yQ1 = yScale(su.q1, gmin, gmax, plotTop, plotBottom);
+            var yQ3 = yScale(su.q3, gmin, gmax, plotTop, plotBottom);
+            var yMed = yScale(su.q2, gmin, gmax, plotTop, plotBottom);
+            var yWL = yScale(su.whiskerLow, gmin, gmax, plotTop, plotBottom);
+            var yWH = yScale(su.whiskerHigh, gmin, gmax, plotTop, plotBottom);
+            var whiskerW = 1.35;
+            var boxStroke = 1.35;
             parts.push(
               '<line x1="' +
                 cx +
@@ -549,8 +728,10 @@
                 '" y2="' +
                 Math.min(yQ1, yQ3) +
                 '" stroke="' +
-                acc +
-                '" stroke-width="2"/>'
+                ink +
+                '" stroke-width="' +
+                whiskerW +
+                '"/>'
             );
             parts.push(
               '<line x1="' +
@@ -562,8 +743,10 @@
                 '" y2="' +
                 yWH +
                 '" stroke="' +
-                acc +
-                '" stroke-width="2"/>'
+                ink +
+                '" stroke-width="' +
+                whiskerW +
+                '"/>'
             );
             var boxTop = Math.min(yQ1, yQ3);
             var boxH = Math.abs(yQ3 - yQ1);
@@ -575,10 +758,14 @@
                 '" width="' +
                 bw +
                 '" height="' +
-                Math.max(boxH, 1) +
-                '" fill="rgba(108,179,255,0.15)" stroke="' +
-                acc +
-                '" stroke-width="1.5"/>'
+                Math.max(boxH, 2) +
+                '" fill="' +
+                boxFill +
+                '" stroke="' +
+                ink +
+                '" stroke-width="' +
+                boxStroke +
+                '"/>'
             );
             parts.push(
               '<line x1="' +
@@ -590,51 +777,61 @@
                 '" y2="' +
                 yMed +
                 '" stroke="' +
-                acc +
-                '" stroke-width="2"/>'
+                ink +
+                '" stroke-width="2.25"/>'
             );
             parts.push(
               '<line x1="' +
-                (cx - bw / 2) +
+                (cx - capW) +
                 '" y1="' +
                 yWL +
                 '" x2="' +
-                (cx + bw / 2) +
+                (cx + capW) +
                 '" y2="' +
                 yWL +
                 '" stroke="' +
-                acc +
-                '" stroke-width="1"/>'
+                ink +
+                '" stroke-width="' +
+                whiskerW +
+                '"/>'
             );
             parts.push(
               '<line x1="' +
-                (cx - bw / 2) +
+                (cx - capW) +
                 '" y1="' +
                 yWH +
                 '" x2="' +
-                (cx + bw / 2) +
+                (cx + capW) +
                 '" y2="' +
                 yWH +
                 '" stroke="' +
-                acc +
-                '" stroke-width="1"/>'
+                ink +
+                '" stroke-width="' +
+                whiskerW +
+                '"/>'
             );
             for (var oi = 0; oi < su.outliers.length; oi++) {
-              var yo = yScale(su.outliers[oi], gmin, gmax, padT, H - padB);
+              var yo = yScale(su.outliers[oi], gmin, gmax, plotTop, plotBottom);
               parts.push(
                 '<circle cx="' +
                   cx +
                   '" cy="' +
                   yo +
-                  '" r="3.5" fill="#f07178" stroke="#2d3a4f" stroke-width="1"/>'
+                  '" r="3.25" fill="' +
+                  paper +
+                  '" stroke="' +
+                  ink +
+                  '" stroke-width="1.35"/>'
               );
             }
             parts.push(
               '<text x="' +
                 cx +
                 '" y="' +
-                (padT - 6) +
-                '" fill="#e7ecf3" font-size="12" font-weight="600" text-anchor="middle">' +
+                (H - 18) +
+                '" fill="' +
+                ink +
+                '" font-size="12" font-weight="600" font-family="system-ui,Segoe UI,sans-serif" text-anchor="middle">' +
                 escapeHtml(labels[gi]) +
                 "</text>"
             );
@@ -651,11 +848,127 @@
             .replace(/"/g, "&quot;");
         }
 
+        function escapeAttr(s) {
+          return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/"/g, "&quot;");
+        }
+
+        function displayGroupLabel(raw, fallback) {
+          var t = String(raw).trim();
+          return t.length ? t : fallback;
+        }
+
+        function plotFileStem(raw, defaultStem) {
+          var t = String(raw).trim();
+          if (!t) return defaultStem;
+          var slug = t
+            .replace(/[\r\n\u0000-\u001f\\/:*?"<>|]+/g, "")
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-")
+            .replace(/^-+|-+$/g, "");
+          if (!slug.length) return defaultStem;
+          if (slug.length > 40) slug = slug.slice(0, 40);
+          return "boxplot-" + slug;
+        }
+
+        function comparePlotStem(raw1, raw2, defaultStem) {
+          var a = String(raw1).trim();
+          var b = String(raw2).trim();
+          if (!a && !b) return defaultStem;
+          return plotFileStem((a || "g1") + "-vs-" + (b || "g2"), defaultStem);
+        }
+
+        function boxplotBlock(svgMarkup, fileStem) {
+          return (
+            '<div class="boxplot-wrap">' +
+            '<div class="boxplot-toolbar">' +
+            '<span class="boxplot-toolbar-label">저장</span>' +
+            '<button type="button" class="boxplot-dl" data-dl="svg" data-name="' +
+            escapeAttr(fileStem) +
+            '" title="벡터 SVG로 저장 (확대에 강함)">SVG</button>' +
+            '<button type="button" class="boxplot-dl" data-dl="png" data-name="' +
+            escapeAttr(fileStem) +
+            '" title="PNG 비트맵으로 저장 (슬라이드·문서용)">PNG</button>' +
+            "</div>" +
+            '<div class="boxplot-svg-root">' +
+            svgMarkup +
+            "</div></div>"
+          );
+        }
+
+        function downloadSvgFile(svg, stem) {
+          var xml = new XMLSerializer().serializeToString(svg);
+          var blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = stem + ".svg";
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }
+
+        function downloadPngFromSvg(svg, stem) {
+          var xml = new XMLSerializer().serializeToString(svg);
+          var blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+          var url = URL.createObjectURL(blob);
+          var img = new Image();
+          var w = svg.width.baseVal.value || 440;
+          var h = svg.height.baseVal.value || 300;
+          var scale = 2;
+          img.onload = function () {
+            var canvas = document.createElement("canvas");
+            canvas.width = Math.round(w * scale);
+            canvas.height = Math.round(h * scale);
+            var ctx = canvas.getContext("2d");
+            ctx.scale(scale, scale);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(url);
+            canvas.toBlob(function (pngBlob) {
+              if (!pngBlob) return;
+              var a = document.createElement("a");
+              a.href = URL.createObjectURL(pngBlob);
+              a.download = stem + ".png";
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }, "image/png");
+          };
+          img.onerror = function () {
+            URL.revokeObjectURL(url);
+          };
+          img.src = url;
+        }
+
         var ta1 = document.getElementById("ta1");
         var ta2 = document.getElementById("ta2");
+        var groupLabel1 = document.getElementById("groupLabel1");
+        var groupLabel2 = document.getElementById("groupLabel2");
         var errEl = document.getElementById("error");
         var resultsEl = document.getElementById("results");
         var timer = null;
+
+        var ALPHA = 0.05;
+
+        function testsSignificant(wt, mw) {
+          var sig = false;
+          if (wt && isFinite(wt.p) && wt.p < ALPHA) sig = true;
+          if (mw && isFinite(mw.p) && mw.p < ALPHA) sig = true;
+          return sig;
+        }
+
+        resultsEl.addEventListener("click", function (ev) {
+          var btn = ev.target.closest(".boxplot-dl");
+          if (!btn || !resultsEl.contains(btn)) return;
+          var wrap = btn.closest(".boxplot-wrap");
+          if (!wrap) return;
+          var svg = wrap.querySelector("svg");
+          if (!svg) return;
+          var stem = btn.getAttribute("data-name") || "boxplot";
+          var kind = btn.getAttribute("data-dl");
+          if (kind === "svg") downloadSvgFile(svg, stem);
+          else if (kind === "png") downloadPngFromSvg(svg, stem);
+        });
 
         function run() {
           var g1 = parseNumbers(ta1.value);
@@ -672,40 +985,52 @@
           errEl.hidden = true;
           resultsEl.hidden = false;
 
+          var L1 = displayGroupLabel(groupLabel1.value, "그룹 1");
+          var L2 = displayGroupLabel(groupLabel2.value, "그룹 2");
+          var stem1 = plotFileStem(groupLabel1.value, "boxplot-group1");
+          var stem2 = plotFileStem(groupLabel2.value, "boxplot-group2");
+          var stemCompare = comparePlotStem(groupLabel1.value, groupLabel2.value, "boxplot-compare");
+
           var s1 = sortNums(g1);
           var su1 = summarize(s1);
           var html = "";
 
           if (!two) {
-            html += "<div>" + renderTable("그룹 1", su1) + "</div>";
-            html +=
-              '<div class="boxplot-wrap">' +
-              boxplotSvg([su1], ["그룹 1"]) +
-              "</div>";
+            html += "<div>" + renderTable(L1, su1) + "</div>";
+            html += boxplotBlock(boxplotSvg([su1], [L1]), stem1);
             resultsEl.className = "stats-layout";
           } else {
             var s2 = sortNums(g2);
             var su2 = summarize(s2);
+            var wt = welchTTest(g1, g2);
+            var mw = mannWhitney(g1, g2);
+            var showStar = testsSignificant(wt, mw);
+
             resultsEl.className = "stats-layout stats-layout--two";
             html +=
               "<div class='stats-group'>" +
-              renderTable("그룹 1", su1) +
-              '<div class="boxplot-wrap">' +
-              boxplotSvg([su1], ["그룹 1"]) +
-              "</div></div>";
+              renderTable(L1, su1) +
+              boxplotBlock(boxplotSvg([su1], [L1]), stem1) +
+              "</div>";
             html +=
               "<div class='stats-group'>" +
-              renderTable("그룹 2", su2) +
-              '<div class="boxplot-wrap">' +
-              boxplotSvg([su2], ["그룹 2"]) +
-              "</div></div>";
+              renderTable(L2, su2) +
+              boxplotBlock(boxplotSvg([su2], [L2]), stem2) +
+              "</div>";
             html +=
-              '<div style="grid-column: 1 / -1" class="boxplot-wrap"><strong style="display:block;margin-bottom:0.5rem;color:var(--muted);font-size:0.875rem">같은 축 비교</strong>' +
-              boxplotSvg([su1, su2], ["그룹 1", "그룹 2"]) +
+              '<div style="grid-column: 1 / -1">' +
+              '<strong style="display:block;margin-bottom:0.5rem;color:var(--muted);font-size:0.875rem">같은 축 비교</strong>' +
+              boxplotBlock(
+                boxplotSvg([su1, su2], [L1, L2], { showStar: showStar }),
+                stemCompare
+              ) +
+              (showStar
+                ? '<p class="hint" style="margin:0.35rem 0 0;font-size:0.75rem">* Welch t 또는 Mann–Whitney 검정 중 하나 이상에서 양측 p &lt; ' +
+                  ALPHA +
+                  ".</p>"
+                : "") +
               "</div>";
 
-            var wt = welchTTest(g1, g2);
-            var mw = mannWhitney(g1, g2);
             html += '<div style="grid-column: 1 / -1">';
             if (wt) {
               html +=
@@ -756,6 +1081,8 @@
 
         ta1.addEventListener("input", schedule);
         ta2.addEventListener("input", schedule);
+        groupLabel1.addEventListener("input", schedule);
+        groupLabel2.addEventListener("input", schedule);
         ta1.addEventListener("blur", function () {
           if (timer) clearTimeout(timer);
           timer = null;
