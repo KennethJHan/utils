@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>기술 통계 · 박스플롯 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+    <style>
+      .stats-layout {
+        display: grid;
+        gap: 1.25rem;
+      }
+      @media (min-width: 720px) {
+        .stats-layout--two {
+          grid-template-columns: 1fr 1fr;
+          align-items: start;
+        }
+      }
+      .stats-group h2 {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        margin: 0 0 0.75rem;
+        color: var(--muted);
+      }
+      .stats-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+        margin-bottom: 1rem;
+      }
+      .stats-table th,
+      .stats-table td {
+        border: 1px solid var(--border);
+        padding: 0.4rem 0.55rem;
+        text-align: left;
+      }
+      .stats-table th {
+        color: var(--muted);
+        font-weight: 500;
+        width: 42%;
+      }
+      .stats-table td {
+        font-variant-numeric: tabular-nums;
+        font-family: ui-monospace, "Cascadia Code", "Noto Sans Mono", monospace;
+      }
+      .boxplot-wrap {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 0.75rem;
+        overflow: auto;
+      }
+      .boxplot-wrap svg {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+      .test-block {
+        margin-top: 1rem;
+        padding: 1rem 1.1rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        font-size: 0.875rem;
+      }
+      .test-block h3 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem;
+        color: var(--text);
+      }
+      .test-block p {
+        margin: 0.35rem 0;
+        font-variant-numeric: tabular-nums;
+        font-family: ui-monospace, "Cascadia Code", "Noto Sans Mono", monospace;
+        font-size: 0.8125rem;
+      }
+      .test-block .note {
+        font-family: var(--font);
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-top: 0.65rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page page--split">
+      <a class="back" href="../">← 목록</a>
+      <h1>기술 통계 · 박스플롯</h1>
+      <p class="lead">
+        숫자 목록을 넣으면 요약 통계와 박스플롯을 보여 줍니다. 두 번째 칸에도 값이 있으면 두
+        그룹 비교와 검정 결과를 함께 냅니다.
+      </p>
+
+      <div class="split">
+        <div class="split__inputs">
+          <form class="form" id="form" novalidate>
+            <div class="field">
+              <label for="ta1">데이터 1</label>
+              <textarea
+                id="ta1"
+                name="ta1"
+                rows="10"
+                autocomplete="off"
+                placeholder="줄마다 하나, 또는 공백·쉼표·세미콜론으로 구분&#10;예: 12&#10;15.5&#10;9"
+              ></textarea>
+              <p class="hint">그룹 A (필수)</p>
+            </div>
+            <div class="field">
+              <label for="ta2">데이터 2</label>
+              <textarea
+                id="ta2"
+                name="ta2"
+                rows="10"
+                autocomplete="off"
+                placeholder="비워 두면 그룹 1만 분석합니다."
+              ></textarea>
+              <p class="hint">그룹 B (선택)</p>
+            </div>
+          </form>
+
+          <p id="error" class="error" hidden></p>
+        </div>
+
+        <div class="split__viz">
+          <div id="results" class="stats-layout" hidden></div>
+          <div class="help" style="margin-top: 2rem">
+          <strong>통계·그래프</strong>
+          <ul>
+            <li>
+              사분위수는 선형 보간(R type 7과 동일한 위치)으로 구합니다. Q2는 중앙값, Q4는
+              자료의 최댓값(상한)입니다.
+            </li>
+            <li>
+              박스플롯 수염은 Tukey 방식입니다. [Q1 − 1.5×IQR, Q3 + 1.5×IQR] 밖의 점은 이상치로
+              표시합니다.
+            </li>
+            <li>
+              두 그룹일 때: <strong>Welch t-검정</strong>(분산 불일치 가정 이표본 t)과
+              <strong>Mann–Whitney U</strong>(순위합, 연속성 보정·동점 보정 포함)의 근사
+              유의확률을 참고용으로 보여 줍니다. 해석은 전제(정규성·독립 등)를 감안해 주세요.
+            </li>
+          </ul>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var DEBOUNCE_MS = 280;
+
+        function parseNumbers(text) {
+          var s = String(text).trim();
+          if (!s) return [];
+          var out = [];
+          var parts = s.split(/[\s,;]+|[\r\n]+/);
+          for (var i = 0; i < parts.length; i++) {
+            var p = parts[i].trim();
+            if (p === "") continue;
+            var n = Number(p);
+            if (isFinite(n)) out.push(n);
+          }
+          return out;
+        }
+
+        function sortNums(a) {
+          return a.slice().sort(function (x, y) {
+            return x - y;
+          });
+        }
+
+        function quantileLinear(sorted, p) {
+          var n = sorted.length;
+          if (n === 0) return NaN;
+          if (n === 1) return sorted[0];
+          var h = (n - 1) * p;
+          var lo = Math.floor(h);
+          var hi = Math.ceil(h);
+          if (lo === hi) return sorted[lo];
+          return sorted[lo] + (sorted[hi] - sorted[lo]) * (h - lo);
+        }
+
+        function mean(a) {
+          if (a.length === 0) return NaN;
+          var s = 0;
+          for (var i = 0; i < a.length; i++) s += a[i];
+          return s / a.length;
+        }
+
+        function sampleVariance(a) {
+          var n = a.length;
+          if (n < 2) return NaN;
+          var m = mean(a);
+          var s = 0;
+          for (var i = 0; i < n; i++) {
+            var d = a[i] - m;
+            s += d * d;
+          }
+          return s / (n - 1);
+        }
+
+        function sampleStd(a) {
+          var v = sampleVariance(a);
+          return isFinite(v) ? Math.sqrt(v) : NaN;
+        }
+
+        function summarize(sorted) {
+          var n = sorted.length;
+          if (n === 0) return null;
+          var mn = sorted[0];
+          var mx = sorted[n - 1];
+          var q1 = quantileLinear(sorted, 0.25);
+          var q2 = quantileLinear(sorted, 0.5);
+          var q3 = quantileLinear(sorted, 0.75);
+          var q4 = mx;
+          var mu = mean(sorted);
+          var sd = sampleStd(sorted);
+          var iqr = q3 - q1;
+          var lowFence = q1 - 1.5 * iqr;
+          var highFence = q3 + 1.5 * iqr;
+          var whiskerLow = mn;
+          var whiskerHigh = mx;
+          for (var i = 0; i < n; i++) {
+            if (sorted[i] >= lowFence) {
+              whiskerLow = sorted[i];
+              break;
+            }
+          }
+          for (var j = n - 1; j >= 0; j--) {
+            if (sorted[j] <= highFence) {
+              whiskerHigh = sorted[j];
+              break;
+            }
+          }
+          var outliers = [];
+          for (var k = 0; k < n; k++) {
+            if (sorted[k] < lowFence || sorted[k] > highFence) outliers.push(sorted[k]);
+          }
+          return {
+            n: n,
+            min: mn,
+            max: mx,
+            q1: q1,
+            q2: q2,
+            q3: q3,
+            q4: q4,
+            mean: mu,
+            std: sd,
+            iqr: iqr,
+            whiskerLow: whiskerLow,
+            whiskerHigh: whiskerHigh,
+            outliers: outliers,
+          };
+        }
+
+        function fmtNum(x) {
+          if (!isFinite(x)) return "—";
+          var ax = Math.abs(x);
+          if (ax !== 0 && (ax >= 1e8 || ax < 1e-6))
+            return x.toExponential(6).replace(/\.?0+e/, "e");
+          var t = x.toFixed(8).replace(/\.?0+$/, "");
+          return t === "-0" ? "0" : t;
+        }
+
+        function fmtP(p) {
+          if (!isFinite(p)) return "—";
+          if (p < 1e-12) return "< 1e-12";
+          if (p < 0.0001) return p.toExponential(4);
+          return p.toFixed(6).replace(/\.?0+$/, "");
+        }
+
+        function logGamma(z) {
+          var c = [
+            76.18009172947146, -86.5053203294167, 24.01409824083091,
+            -1.231739572450155, 0.001208650973866179, -5.39523938405e-6,
+          ];
+          var x = z;
+          var y = z;
+          var tmp = x + 5.5;
+          tmp = (x + 0.5) * Math.log(tmp) - tmp;
+          var ser = 1.000000000190015;
+          for (var j = 0; j < 6; j++) ser += c[j] / ++y;
+          return tmp + Math.log((ser * 2.5066282746310005) / x);
+        }
+
+        function betacf(a, b, x) {
+          var MAXIT = 200;
+          var EPS = 3e-14;
+          var FPMIN = 1e-300;
+          var aa,
+            c,
+            d,
+            del,
+            h,
+            qab = a + b,
+            qap = a + 1,
+            qam = a - 1,
+            m,
+            m2;
+          c = 1;
+          d = 1 - (qab * x) / qap;
+          if (Math.abs(d) < FPMIN) d = FPMIN;
+          d = 1 / d;
+          h = d;
+          for (m = 1; m <= MAXIT; m++) {
+            m2 = 2 * m;
+            aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+            d = 1 + aa * d;
+            if (Math.abs(d) < FPMIN) d = FPMIN;
+            c = 1 + aa / c;
+            if (Math.abs(c) < FPMIN) c = FPMIN;
+            d = 1 / d;
+            h *= d * c;
+            aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+            d = 1 + aa * d;
+            if (Math.abs(d) < FPMIN) d = FPMIN;
+            c = 1 + aa / c;
+            if (Math.abs(c) < FPMIN) c = FPMIN;
+            d = 1 / d;
+            del = d * c;
+            h *= del;
+            if (Math.abs(del - 1) < EPS) break;
+          }
+          return h;
+        }
+
+        function betaInc(a, b, x) {
+          if (x <= 0) return 0;
+          if (x >= 1) return 1;
+          var bt =
+            Math.exp(logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+          if (x < (a + 1) / (a + b + 2)) return (bt * betacf(a, b, x)) / a;
+          return 1 - (bt * betacf(b, a, 1 - x)) / b;
+        }
+
+        function studentTCdf(t, df) {
+          if (df <= 0 || !isFinite(df)) return NaN;
+          var x = df / (df + t * t);
+          if (t >= 0) return 1 - 0.5 * betaInc(df / 2, 0.5, x);
+          return 0.5 * betaInc(df / 2, 0.5, x);
+        }
+
+        function welchTTest(a1, a2) {
+          var n1 = a1.length;
+          var n2 = a2.length;
+          if (n1 < 2 || n2 < 2) return null;
+          var m1 = mean(a1);
+          var m2 = mean(a2);
+          var v1 = sampleVariance(a1);
+          var v2 = sampleVariance(a2);
+          if (!isFinite(v1) || !isFinite(v2)) return null;
+          var se = Math.sqrt(v1 / n1 + v2 / n2);
+          if (se === 0) return { t: m1 === m2 ? 0 : Infinity, df: NaN, p: m1 === m2 ? 1 : 0 };
+          var t = (m1 - m2) / se;
+          var num = se * se * se * se;
+          var den = (v1 * v1) / (n1 * n1 * (n1 - 1)) + (v2 * v2) / (n2 * n2 * (n2 - 1));
+          var df = num / den;
+          var p = 2 * (1 - studentTCdf(Math.abs(t), df));
+          if (p > 1) p = 1;
+          return { t: t, df: df, p: p, m1: m1, m2: m2 };
+        }
+
+        function normalCdf(z) {
+          var t = 1 / (1 + 0.2316419 * Math.abs(z));
+          var d = 0.3989423 * Math.exp(-0.5 * z * z);
+          var p =
+            d *
+            t *
+            (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+          return z > 0 ? 1 - p : p;
+        }
+
+        function mannWhitney(a1, a2) {
+          var n1 = a1.length;
+          var n2 = a2.length;
+          if (n1 < 1 || n2 < 1) return null;
+          var combined = [];
+          var i;
+          for (i = 0; i < n1; i++) combined.push({ v: a1[i], g: 0 });
+          for (i = 0; i < n2; i++) combined.push({ v: a2[i], g: 1 });
+          combined.sort(function (a, b) {
+            return a.v - b.v;
+          });
+          var ranks = new Array(combined.length);
+          var j = 0;
+          while (j < combined.length) {
+            var k = j;
+            while (k < combined.length && combined[k].v === combined[j].v) k++;
+            var avg = (j + k + 1) / 2;
+            for (var r = j; r < k; r++) ranks[r] = avg;
+            j = k;
+          }
+          var R1 = 0;
+          var tieGroups = [];
+          j = 0;
+          while (j < combined.length) {
+            var k2 = j;
+            while (k2 < combined.length && combined[k2].v === combined[j].v) k2++;
+            var len = k2 - j;
+            if (len > 1) tieGroups.push(len);
+            j = k2;
+          }
+          for (i = 0; i < combined.length; i++) {
+            if (combined[i].g === 0) R1 += ranks[i];
+          }
+          var U1 = R1 - (n1 * (n1 + 1)) / 2;
+          var U2 = n1 * n2 - U1;
+          var U = Math.min(U1, U2);
+          var meanU = (n1 * n2) / 2;
+          var N = n1 + n2;
+          var tieSum = 0;
+          for (var t = 0; t < tieGroups.length; t++) {
+            var tg = tieGroups[t];
+            tieSum += tg * tg * tg - tg;
+          }
+          var varU = (n1 * n2 / 12) * (N + 1 - tieSum / (N * (N - 1)));
+          if (varU <= 0) {
+            return { U1: U1, U2: U2, z: 0, p: 1 };
+          }
+          var sdU = Math.sqrt(varU);
+          var z =
+            U > meanU ? (U - 0.5 - meanU) / sdU : U < meanU ? (U + 0.5 - meanU) / sdU : 0;
+          var p = 2 * Math.min(normalCdf(z), 1 - normalCdf(z));
+          if (p > 1) p = 1;
+          return { U1: U1, U2: U2, z: z, p: p, R1: R1 };
+        }
+
+        function statsTableRows(su) {
+          return [
+            ["n", String(su.n)],
+            ["최솟값 (Q0)", fmtNum(su.min)],
+            ["Q1 (25%)", fmtNum(su.q1)],
+            ["Q2 (중앙값)", fmtNum(su.q2)],
+            ["Q3 (75%)", fmtNum(su.q3)],
+            ["Q4 (최댓값)", fmtNum(su.q4)],
+            ["평균", fmtNum(su.mean)],
+            ["표준편차 (표본)", fmtNum(su.std)],
+            ["IQR", fmtNum(su.iqr)],
+          ];
+        }
+
+        function renderTable(title, su) {
+          var rows = statsTableRows(su);
+          var h = "<h2>" + title + "</h2><table class='stats-table'><tbody>";
+          for (var i = 0; i < rows.length; i++) {
+            h +=
+              "<tr><th>" +
+              rows[i][0] +
+              "</th><td>" +
+              rows[i][1] +
+              "</td></tr>";
+          }
+          h += "</tbody></table>";
+          return h;
+        }
+
+        function yScale(v, vmin, vmax, top, bottom) {
+          if (vmax === vmin) return (top + bottom) / 2;
+          return top + ((vmax - v) / (vmax - vmin)) * (bottom - top);
+        }
+
+        function boxplotSvg(groups, labels) {
+          var W = 420;
+          var H = 260;
+          var padL = 44;
+          var padR = 16;
+          var padT = 24;
+          var padB = 48;
+          var plotW = W - padL - padR;
+          var plotH = H - padT - padB;
+          var gmin = Infinity;
+          var gmax = -Infinity;
+          for (var g = 0; g < groups.length; g++) {
+            var su = groups[g];
+            gmin = Math.min(gmin, su.whiskerLow, su.outliers.length ? Math.min.apply(null, su.outliers) : su.whiskerLow);
+            gmax = Math.max(gmax, su.whiskerHigh, su.outliers.length ? Math.max.apply(null, su.outliers) : su.whiskerHigh);
+          }
+          if (!isFinite(gmin) || !isFinite(gmax)) gmin = 0, gmax = 1;
+          if (gmin === gmax) {
+            gmin -= 1;
+            gmax += 1;
+          }
+          var span = gmax - gmin;
+          gmin -= span * 0.06;
+          gmax += span * 0.06;
+
+          var nG = groups.length;
+          var colW = plotW / nG;
+          var parts = [];
+          parts.push(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' +
+              W +
+              " " +
+              H +
+              '" width="' +
+              W +
+              '" height="' +
+              H +
+              '" aria-label="박스플롯">'
+          );
+          parts.push(
+            '<line x1="' +
+              padL +
+              '" y1="' +
+              (H - padB) +
+              '" x2="' +
+              (W - padR) +
+              '" y2="' +
+              (H - padB) +
+              '" stroke="#2d3a4f" stroke-width="1"/>'
+          );
+          parts.push(
+            '<text x="' +
+              padL +
+              '" y="' +
+              (H - 14) +
+              '" fill="#8b9cb3" font-size="11">' +
+              fmtNum(gmin) +
+              "</text>"
+          );
+          parts.push(
+            '<text x="' +
+              (W - padR) +
+              '" y="' +
+              (H - 14) +
+              '" fill="#8b9cb3" font-size="11" text-anchor="end">' +
+              fmtNum(gmax) +
+              "</text>"
+          );
+
+          for (var gi = 0; gi < nG; gi++) {
+            var su = groups[gi];
+            var cx = padL + colW * gi + colW / 2;
+            var bw = Math.min(48, colW * 0.45);
+            var yQ1 = yScale(su.q1, gmin, gmax, padT, H - padB);
+            var yQ3 = yScale(su.q3, gmin, gmax, padT, H - padB);
+            var yMed = yScale(su.q2, gmin, gmax, padT, H - padB);
+            var yWL = yScale(su.whiskerLow, gmin, gmax, padT, H - padB);
+            var yWH = yScale(su.whiskerHigh, gmin, gmax, padT, H - padB);
+            var acc = "#6cb3ff";
+            parts.push(
+              '<line x1="' +
+                cx +
+                '" y1="' +
+                yWL +
+                '" x2="' +
+                cx +
+                '" y2="' +
+                Math.min(yQ1, yQ3) +
+                '" stroke="' +
+                acc +
+                '" stroke-width="2"/>'
+            );
+            parts.push(
+              '<line x1="' +
+                cx +
+                '" y1="' +
+                Math.max(yQ1, yQ3) +
+                '" x2="' +
+                cx +
+                '" y2="' +
+                yWH +
+                '" stroke="' +
+                acc +
+                '" stroke-width="2"/>'
+            );
+            var boxTop = Math.min(yQ1, yQ3);
+            var boxH = Math.abs(yQ3 - yQ1);
+            parts.push(
+              '<rect x="' +
+                (cx - bw / 2) +
+                '" y="' +
+                boxTop +
+                '" width="' +
+                bw +
+                '" height="' +
+                Math.max(boxH, 1) +
+                '" fill="rgba(108,179,255,0.15)" stroke="' +
+                acc +
+                '" stroke-width="1.5"/>'
+            );
+            parts.push(
+              '<line x1="' +
+                (cx - bw / 2) +
+                '" y1="' +
+                yMed +
+                '" x2="' +
+                (cx + bw / 2) +
+                '" y2="' +
+                yMed +
+                '" stroke="' +
+                acc +
+                '" stroke-width="2"/>'
+            );
+            parts.push(
+              '<line x1="' +
+                (cx - bw / 2) +
+                '" y1="' +
+                yWL +
+                '" x2="' +
+                (cx + bw / 2) +
+                '" y2="' +
+                yWL +
+                '" stroke="' +
+                acc +
+                '" stroke-width="1"/>'
+            );
+            parts.push(
+              '<line x1="' +
+                (cx - bw / 2) +
+                '" y1="' +
+                yWH +
+                '" x2="' +
+                (cx + bw / 2) +
+                '" y2="' +
+                yWH +
+                '" stroke="' +
+                acc +
+                '" stroke-width="1"/>'
+            );
+            for (var oi = 0; oi < su.outliers.length; oi++) {
+              var yo = yScale(su.outliers[oi], gmin, gmax, padT, H - padB);
+              parts.push(
+                '<circle cx="' +
+                  cx +
+                  '" cy="' +
+                  yo +
+                  '" r="3.5" fill="#f07178" stroke="#2d3a4f" stroke-width="1"/>'
+              );
+            }
+            parts.push(
+              '<text x="' +
+                cx +
+                '" y="' +
+                (padT - 6) +
+                '" fill="#e7ecf3" font-size="12" font-weight="600" text-anchor="middle">' +
+                escapeHtml(labels[gi]) +
+                "</text>"
+            );
+          }
+          parts.push("</svg>");
+          return parts.join("");
+        }
+
+        function escapeHtml(s) {
+          return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+        }
+
+        var ta1 = document.getElementById("ta1");
+        var ta2 = document.getElementById("ta2");
+        var errEl = document.getElementById("error");
+        var resultsEl = document.getElementById("results");
+        var timer = null;
+
+        function run() {
+          var g1 = parseNumbers(ta1.value);
+          var g2 = parseNumbers(ta2.value);
+          var two = g2.length > 0;
+
+          if (g1.length === 0) {
+            errEl.hidden = true;
+            resultsEl.hidden = true;
+            resultsEl.innerHTML = "";
+            return;
+          }
+
+          errEl.hidden = true;
+          resultsEl.hidden = false;
+
+          var s1 = sortNums(g1);
+          var su1 = summarize(s1);
+          var html = "";
+
+          if (!two) {
+            html += "<div>" + renderTable("그룹 1", su1) + "</div>";
+            html +=
+              '<div class="boxplot-wrap">' +
+              boxplotSvg([su1], ["그룹 1"]) +
+              "</div>";
+            resultsEl.className = "stats-layout";
+          } else {
+            var s2 = sortNums(g2);
+            var su2 = summarize(s2);
+            resultsEl.className = "stats-layout stats-layout--two";
+            html +=
+              "<div class='stats-group'>" +
+              renderTable("그룹 1", su1) +
+              '<div class="boxplot-wrap">' +
+              boxplotSvg([su1], ["그룹 1"]) +
+              "</div></div>";
+            html +=
+              "<div class='stats-group'>" +
+              renderTable("그룹 2", su2) +
+              '<div class="boxplot-wrap">' +
+              boxplotSvg([su2], ["그룹 2"]) +
+              "</div></div>";
+            html +=
+              '<div style="grid-column: 1 / -1" class="boxplot-wrap"><strong style="display:block;margin-bottom:0.5rem;color:var(--muted);font-size:0.875rem">같은 축 비교</strong>' +
+              boxplotSvg([su1, su2], ["그룹 1", "그룹 2"]) +
+              "</div>";
+
+            var wt = welchTTest(g1, g2);
+            var mw = mannWhitney(g1, g2);
+            html += '<div style="grid-column: 1 / -1">';
+            if (wt) {
+              html +=
+                '<div class="test-block"><h3>Welch 이표본 t-검정 (평균 차이)</h3>' +
+                "<p>t = " +
+                fmtNum(wt.t) +
+                ", df ≈ " +
+                fmtNum(wt.df) +
+                "</p>" +
+                "<p>양측 p ≈ " +
+                fmtP(wt.p) +
+                "</p>" +
+                '<p class="note">H₀: 두 모집단 평균이 같다 (분산은 다를 수 있음).</p></div>';
+            } else {
+              html +=
+                '<div class="test-block"><h3>Welch t-검정</h3><p class="note">각 그룹에 서로 다른 값이 최소 2개씩 있어야 분산을 쓸 수 있습니다.</p></div>';
+            }
+            if (mw) {
+              html +=
+                '<div class="test-block"><h3>Mann–Whitney U (순위합)</h3>' +
+                "<p>U₁ = " +
+                fmtNum(mw.U1) +
+                ", U₂ = " +
+                fmtNum(mw.U2) +
+                " (작은 쪽 U = " +
+                fmtNum(Math.min(mw.U1, mw.U2)) +
+                ")</p>" +
+                "<p>정규 근사 z ≈ " +
+                fmtNum(mw.z) +
+                ", 양측 p ≈ " +
+                fmtP(mw.p) +
+                "</p>" +
+                '<p class="note">연속성 보정·동점 보정 포함. 표본이 매우 작으면 근사가 거칠 수 있습니다.</p></div>';
+            }
+            html += "</div>";
+          }
+
+          resultsEl.innerHTML = html;
+        }
+
+        function schedule() {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(function () {
+            timer = null;
+            run();
+          }, DEBOUNCE_MS);
+        }
+
+        ta1.addEventListener("input", schedule);
+        ta2.addEventListener("input", schedule);
+        ta1.addEventListener("blur", function () {
+          if (timer) clearTimeout(timer);
+          timer = null;
+          var g1 = parseNumbers(ta1.value);
+          if (g1.length === 0 && ta1.value.trim() !== "") {
+            errEl.textContent =
+              "데이터 1에서 숫자로 읽을 수 있는 값이 없습니다. 형식을 확인해 주세요.";
+            errEl.hidden = false;
+            resultsEl.hidden = true;
+            resultsEl.innerHTML = "";
+          } else {
+            errEl.hidden = true;
+            run();
+          }
+        });
+        run();
+      })();
+    </script>
+  </body>
+</html>
