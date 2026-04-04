@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>바코드 · QR 코드 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+    <style>
+      .preview-card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.25rem;
+      }
+      .preview-card h2 {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        margin: 0 0 0.65rem;
+        color: var(--muted);
+      }
+      .preview-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .preview-toolbar span {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-right: 0.25rem;
+      }
+      .preview-dl {
+        font: inherit;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.55rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .preview-dl:hover {
+        border-color: var(--accent);
+        color: var(--accent-hover);
+      }
+      .preview-box {
+        background: #fff;
+        border-radius: 8px;
+        padding: 0.75rem;
+        overflow: auto;
+        text-align: center;
+      }
+      .preview-box svg {
+        display: block;
+        margin: 0 auto;
+        max-width: 100%;
+        height: auto;
+      }
+      .preview-box--qr {
+        min-height: 240px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .preview-box--qr canvas,
+      .preview-box--qr img {
+        display: block;
+        margin: 0 auto;
+        max-width: 100%;
+        height: auto;
+      }
+      .preview-placeholder {
+        color: var(--muted);
+        font-size: 0.875rem;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page page--split">
+      <a class="back" href="../">← 목록</a>
+      <h1>바코드 · QR 코드</h1>
+      <p class="lead">
+        같은 문자열로 <strong>1D 바코드</strong>(종류 선택)와 <strong>QR 코드</strong>를 만듭니다. QR은
+        브라우저용 <a href="https://github.com/davidshimjs/qrcodejs">qrcodejs</a>, 바코드는
+        <a href="https://github.com/lindell/JsBarcode">JsBarcode</a>를 씁니다(로컬 <code>vendor/</code>).
+      </p>
+
+      <div class="split">
+        <div class="split__inputs">
+          <form class="form" id="form" novalidate>
+            <div class="field">
+              <label for="payload">내용</label>
+              <textarea
+                id="payload"
+                name="payload"
+                rows="6"
+                spellcheck="false"
+                autocomplete="off"
+                placeholder="URL, 텍스트, 숫자 등"
+              ></textarea>
+              <p class="hint">비우면 미리보기가 비워집니다. 바코드와 QR은 각각 규칙이 다릅니다.</p>
+            </div>
+            <div class="field">
+              <label for="barcodeFormat">1D 바코드 종류</label>
+              <select id="barcodeFormat" name="barcodeFormat">
+                <option value="CODE128" selected>CODE128 (일반 텍스트)</option>
+                <option value="CODE39">CODE39 (영숫자·일부 특수문자)</option>
+                <option value="EAN13">EAN-13 (숫자 12 또는 13자리)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="qrEcc">QR 오류 정정 수준</label>
+              <select id="qrEcc" name="qrEcc">
+                <option value="L">L (약 7% 복구)</option>
+                <option value="M" selected>M (약 15% 복구)</option>
+                <option value="Q">Q (약 25% 복구)</option>
+                <option value="H">H (약 30% 복구)</option>
+              </select>
+            </div>
+          </form>
+          <p id="barcodeErr" class="error" hidden></p>
+          <p id="qrErr" class="error" hidden></p>
+        </div>
+
+        <div class="split__viz">
+          <div class="preview-card">
+            <h2>1D 바코드</h2>
+            <div class="preview-toolbar">
+              <span>저장</span>
+              <button type="button" class="preview-dl" id="dlBarcodeSvg" title="벡터 SVG">
+                SVG
+              </button>
+              <button type="button" class="preview-dl" id="dlBarcodePng" title="PNG 비트맵">
+                PNG
+              </button>
+            </div>
+            <div class="preview-box" id="barcodeBox">
+              <p class="preview-placeholder" id="barcodePlaceholder">내용을 입력하면 표시됩니다.</p>
+              <svg id="svgBarcode" xmlns="http://www.w3.org/2000/svg" style="display: none" role="img" aria-label="바코드"></svg>
+            </div>
+          </div>
+
+          <div class="preview-card">
+            <h2>QR 코드</h2>
+            <div class="preview-toolbar">
+              <span>저장</span>
+              <button type="button" class="preview-dl" id="dlQrPng" title="PNG 비트맵">PNG</button>
+            </div>
+            <div class="preview-box preview-box--qr" id="qrBox">
+              <p class="preview-placeholder" id="qrPlaceholder">내용을 입력하면 표시됩니다.</p>
+              <div id="qrHost" style="display: none"></div>
+            </div>
+          </div>
+
+          <div class="help">
+            <strong>참고</strong>
+            <ul>
+              <li>
+                <strong>EAN-13</strong>은 숫자만 허용되며, 12자리면 체크 디지트가 자동으로 붙는 경우가 많습니다.
+              </li>
+              <li>
+                <strong>CODE39</strong>는 대문자·숫자·공백·일부 기호만 됩니다. 한글은 CODE128을 쓰세요.
+              </li>
+              <li>
+                QR은 길이·인코딩에 따라 한도가 있습니다. 한쪽만 실패해도 다른 쪽은 그대로 갱신됩니다.
+              </li>
+              <li>
+                QR PNG 저장은 브라우저가 <code>canvas</code>로 그릴 때만 동작합니다.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="vendor/JsBarcode.all.min.js"></script>
+    <script src="vendor/qrcodejs.min.js"></script>
+    <script>
+      (function () {
+        var DEBOUNCE_MS = 280;
+        var QR_SIZE = 220;
+
+        var payloadEl = document.getElementById("payload");
+        var formatEl = document.getElementById("barcodeFormat");
+        var eccEl = document.getElementById("qrEcc");
+        var barcodeErrEl = document.getElementById("barcodeErr");
+        var qrErrEl = document.getElementById("qrErr");
+        var svgBarcode = document.getElementById("svgBarcode");
+        var barcodePlaceholder = document.getElementById("barcodePlaceholder");
+        var qrHost = document.getElementById("qrHost");
+        var qrPlaceholder = document.getElementById("qrPlaceholder");
+        var timer = null;
+
+        function setHidden(el, hidden) {
+          el.hidden = hidden;
+          if (hidden) el.textContent = "";
+        }
+
+        function downloadSvgFile(svg, stem) {
+          var xml = new XMLSerializer().serializeToString(svg);
+          var blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = stem + ".svg";
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }
+
+        function ensureSvgPixelSize(svg) {
+          var r = svg.getBoundingClientRect();
+          var w = Math.max(1, Math.ceil(r.width));
+          var h = Math.max(1, Math.ceil(r.height));
+          if (!svg.getAttribute("width")) svg.setAttribute("width", String(w));
+          if (!svg.getAttribute("height")) svg.setAttribute("height", String(h));
+          return { w: w, h: h };
+        }
+
+        function downloadPngFromSvg(svg, stem) {
+          ensureSvgPixelSize(svg);
+          var xml = new XMLSerializer().serializeToString(svg);
+          var blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+          var url = URL.createObjectURL(blob);
+          var img = new Image();
+          var w = svg.width.baseVal ? svg.width.baseVal.value : 400;
+          var h = svg.height.baseVal ? svg.height.baseVal.value : 120;
+          if (!w || !h) {
+            w = 400;
+            h = 120;
+          }
+          var scale = 2;
+          img.onload = function () {
+            var canvas = document.createElement("canvas");
+            canvas.width = Math.round(w * scale);
+            canvas.height = Math.round(h * scale);
+            var ctx = canvas.getContext("2d");
+            ctx.scale(scale, scale);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(url);
+            canvas.toBlob(function (pngBlob) {
+              if (!pngBlob) return;
+              var a = document.createElement("a");
+              a.href = URL.createObjectURL(pngBlob);
+              a.download = stem + ".png";
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }, "image/png");
+          };
+          img.onerror = function () {
+            URL.revokeObjectURL(url);
+          };
+          img.src = url;
+        }
+
+        function downloadPngFromCanvas(canvas, stem) {
+          canvas.toBlob(function (blob) {
+            if (!blob) return;
+            var a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = stem + ".png";
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }, "image/png");
+        }
+
+        function barcodeErrorMessage(e, format) {
+          var m = e && e.message ? String(e.message) : "바코드를 만들 수 없습니다.";
+          if (format === "EAN13") {
+            return (
+              "EAN-13 규칙에 맞지 않습니다. 숫자만 12자리 또는 13자리로 넣어 보세요. (" + m + ")"
+            );
+          }
+          if (format === "CODE39") {
+            return "CODE39에 맞지 않는 문자가 있을 수 있습니다. (" + m + ")";
+          }
+          return m;
+        }
+
+        function renderBarcode(text, format) {
+          setHidden(barcodeErrEl, true);
+          while (svgBarcode.firstChild) svgBarcode.removeChild(svgBarcode.firstChild);
+          try {
+            JsBarcode(svgBarcode, text, {
+              format: format,
+              width: format === "EAN13" ? 1.8 : 2,
+              height: format === "EAN13" ? 72 : 88,
+              displayValue: true,
+              fontSize: format === "EAN13" ? 16 : 15,
+              margin: 12,
+              background: "#ffffff",
+              lineColor: "#000000",
+            });
+            svgBarcode.style.display = "block";
+            svgBarcode.removeAttribute("aria-hidden");
+            barcodePlaceholder.style.display = "none";
+          } catch (e) {
+            svgBarcode.style.display = "none";
+            svgBarcode.setAttribute("aria-hidden", "true");
+            barcodePlaceholder.style.display = "block";
+            barcodePlaceholder.textContent = "이 종류의 바코드로는 표시할 수 없습니다.";
+            barcodeErrEl.textContent = barcodeErrorMessage(e, format);
+            setHidden(barcodeErrEl, false);
+          }
+        }
+
+        function renderQr(text, eccKey) {
+          setHidden(qrErrEl, true);
+          qrHost.innerHTML = "";
+          qrPlaceholder.style.display = "none";
+          qrHost.style.display = "block";
+          try {
+            var level = QRCode.CorrectLevel[eccKey];
+            if (level === undefined) level = QRCode.CorrectLevel.M;
+            new QRCode(qrHost, {
+              text: text,
+              width: QR_SIZE,
+              height: QR_SIZE,
+              correctLevel: level,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+            });
+          } catch (e) {
+            qrHost.innerHTML = "";
+            qrHost.style.display = "none";
+            qrPlaceholder.style.display = "block";
+            qrPlaceholder.textContent = "QR을 만들 수 없습니다.";
+            var m = e && e.message ? String(e.message) : "QR을 만들 수 없습니다.";
+            qrErrEl.textContent = "QR: " + m;
+            setHidden(qrErrEl, false);
+          }
+        }
+
+        function run() {
+          var text = String(payloadEl.value).trim();
+          var format = formatEl.value;
+          var ecc = eccEl.value;
+
+          if (!text) {
+            setHidden(barcodeErrEl, true);
+            setHidden(qrErrEl, true);
+            while (svgBarcode.firstChild) svgBarcode.removeChild(svgBarcode.firstChild);
+            svgBarcode.style.display = "none";
+            svgBarcode.setAttribute("aria-hidden", "true");
+            barcodePlaceholder.style.display = "block";
+            barcodePlaceholder.textContent = "내용을 입력하면 표시됩니다.";
+            qrHost.innerHTML = "";
+            qrHost.style.display = "none";
+            qrPlaceholder.style.display = "block";
+            qrPlaceholder.textContent = "내용을 입력하면 표시됩니다.";
+            return;
+          }
+
+          renderBarcode(text, format);
+          renderQr(text, ecc);
+        }
+
+        function schedule() {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(function () {
+            timer = null;
+            run();
+          }, DEBOUNCE_MS);
+        }
+
+        document.getElementById("dlBarcodeSvg").addEventListener("click", function () {
+          if (svgBarcode.style.display === "none" || !svgBarcode.firstChild) return;
+          downloadSvgFile(svgBarcode, "barcode");
+        });
+        document.getElementById("dlBarcodePng").addEventListener("click", function () {
+          if (svgBarcode.style.display === "none" || !svgBarcode.firstChild) return;
+          downloadPngFromSvg(svgBarcode, "barcode");
+        });
+        document.getElementById("dlQrPng").addEventListener("click", function () {
+          var canvas = qrHost.querySelector("canvas");
+          if (!canvas) {
+            alert("PNG 저장은 Canvas로 그려진 QR에서만 가능합니다.");
+            return;
+          }
+          downloadPngFromCanvas(canvas, "qrcode");
+        });
+
+        payloadEl.addEventListener("input", schedule);
+        formatEl.addEventListener("change", schedule);
+        eccEl.addEventListener("change", schedule);
+
+        run();
+      })();
+    </script>
+  </body>
+</html>

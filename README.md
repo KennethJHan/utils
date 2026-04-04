@@ -14,6 +14,7 @@
 | 경로 | 설명 |
 |------|------|
 | [`docs/time-diff/`](docs/time-diff/) | 두 시각의 차이 (B − A), `YYYY-MM-DD HH:MM:SS` 또는 `HH:MM:SS` |
+| [`docs/barcode-qr/`](docs/barcode-qr/) | 1D 바코드(CODE128·CODE39·EAN-13)와 QR 코드 생성·저장 |
 
 ## 로컬에서 미리보기
 

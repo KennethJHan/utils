@@ -1,0 +1,3 @@
+JsBarcode 3.11.6 (MIT) — unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js
+qrcodejs 1.0.0 (MIT) — cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcodejs.min.js
+(node-qrcode npm 패키지는 배포 tarball에 브라우저 번들이 없어 동등 목적의 qrcodejs 사용)
