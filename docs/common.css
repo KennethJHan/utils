@@ -210,6 +210,40 @@ h1 {
   margin-top: 0.25rem;
 }
 
+.tool-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.tool-category {
+  margin: 0;
+}
+
+.tool-category__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.tool-category__hint {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+.tool-category .tool-list {
+  margin: 0;
+}
+
+.tool-category .tool-list li:last-child {
+  margin-bottom: 0;
+}
+
 .back {
   display: inline-block;
   margin-bottom: 1.5rem;

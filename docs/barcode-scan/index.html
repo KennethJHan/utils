@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>바코드 · QR 스캐너 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+    <style>
+      .scan-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      .scan-btn {
+        font: inherit;
+        font-size: 0.875rem;
+        padding: 0.45rem 0.85rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .scan-btn:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent-hover);
+      }
+      .scan-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .scan-btn--primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #0f1419;
+        font-weight: 600;
+      }
+      .scan-btn--primary:hover:not(:disabled) {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+        color: #0f1419;
+      }
+      #reader {
+        width: 100%;
+        max-width: 520px;
+        min-height: 280px;
+        margin: 0 auto 1rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: #000;
+        overflow: hidden;
+      }
+      #reader video {
+        border-radius: inherit;
+      }
+      .result-panel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 1rem 1.1rem;
+        margin-top: 1.25rem;
+      }
+      .result-panel h2 {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        margin: 0 0 0.65rem;
+        color: var(--muted);
+      }
+      .result-meta {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin: 0 0 0.5rem;
+        font-family: ui-monospace, monospace;
+      }
+      .result-text {
+        width: 100%;
+        min-height: 5rem;
+        box-sizing: border-box;
+        padding: 0.65rem 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--text);
+        font: 0.875rem/1.45 ui-monospace, "Cascadia Code", monospace;
+        resize: vertical;
+      }
+      .result-actions {
+        margin-top: 0.65rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .file-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .file-row input[type="file"] {
+        font-size: 0.8125rem;
+        max-width: 100%;
+      }
+      .status-msg {
+        font-size: 0.8125rem;
+        color: var(--muted);
+        margin: 0 0 0.75rem;
+      }
+      .status-msg--err {
+        color: var(--error);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page page--split">
+      <a class="back" href="../">← 목록</a>
+      <h1>바코드 · QR 스캐너</h1>
+      <p class="lead">
+        카메라로 실시간 인식하거나, 찍은 이미지·스크린샷 파일을 올려 QR·1D 바코드를 읽습니다.
+        브라우저 <a href="https://github.com/mebjas/html5-qrcode">html5-qrcode</a>(로컬
+        <code>vendor/</code>)를 사용합니다.
+      </p>
+
+      <div class="split">
+        <div class="split__inputs">
+          <p class="status-msg" id="statusMsg">카메라를 켜려면 아래 버튼을 누르세요.</p>
+          <p class="status-msg status-msg--err" id="errMsg" hidden></p>
+
+          <div class="scan-actions">
+            <button type="button" class="scan-btn scan-btn--primary" id="btnStart">카메라 시작</button>
+            <button type="button" class="scan-btn" id="btnStop" disabled>카메라 중지</button>
+          </div>
+
+          <div class="file-row">
+            <label for="filePick" class="scan-btn" style="display: inline-block; cursor: pointer; margin: 0"
+              >이미지 파일로 읽기</label
+            >
+            <input type="file" id="filePick" accept="image/*" hidden />
+          </div>
+
+          <div class="help">
+            <strong>안내</strong>
+            <ul>
+              <li>
+                카메라는 보통 <strong>HTTPS</strong> 또는 <strong>localhost</strong>에서만 동작합니다. 첫 실행 시
+                브라우저에서 카메라 권한을 허용해야 합니다.
+              </li>
+              <li>
+                인식되는 형식은 기기·브라우저·조명·초점에 따라 다릅니다. QR, EAN, CODE128 등이 흔히
+                됩니다.
+              </li>
+              <li>
+                파일 스캔은 네트워크를 쓰지 않고 기기 안에서만 처리됩니다.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="split__viz">
+          <div id="reader" aria-live="polite" aria-label="카메라 미리보기"></div>
+
+          <div class="result-panel">
+            <h2>읽은 내용</h2>
+            <p class="result-meta" id="resultMeta">아직 없음</p>
+            <textarea id="resultOut" class="result-text" readonly rows="6" placeholder="인식 결과가 여기에 표시됩니다."></textarea>
+            <div class="result-actions">
+              <button type="button" class="scan-btn" id="btnCopy" disabled>복사</button>
+              <button type="button" class="scan-btn" id="btnClear">지우기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="vendor/html5-qrcode.min.js"></script>
+    <script>
+      (function () {
+        var readerId = "reader";
+        var html5QrCode = null;
+        var scanning = false;
+
+        var statusMsg = document.getElementById("statusMsg");
+        var errMsg = document.getElementById("errMsg");
+        var btnStart = document.getElementById("btnStart");
+        var btnStop = document.getElementById("btnStop");
+        var filePick = document.getElementById("filePick");
+        var resultOut = document.getElementById("resultOut");
+        var resultMeta = document.getElementById("resultMeta");
+        var btnCopy = document.getElementById("btnCopy");
+        var btnClear = document.getElementById("btnClear");
+
+        function setErr(text) {
+          if (text) {
+            errMsg.textContent = text;
+            errMsg.hidden = false;
+          } else {
+            errMsg.hidden = true;
+            errMsg.textContent = "";
+          }
+        }
+
+        function getEngine() {
+          if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode(readerId, false);
+          }
+          return html5QrCode;
+        }
+
+        function showResult(text, formatLabel) {
+          resultOut.value = text;
+          resultMeta.textContent = formatLabel ? "형식: " + formatLabel : "형식: (알 수 없음)";
+          btnCopy.disabled = !text;
+        }
+
+        function formatFromResult(decodedResult) {
+          if (!decodedResult || !decodedResult.result) return "";
+          var fmt = decodedResult.result.format;
+          if (fmt == null) return "";
+          if (typeof fmt === "string") return fmt;
+          if (typeof fmt === "object" && fmt.formatName) return String(fmt.formatName);
+          return String(fmt);
+        }
+
+        btnStart.addEventListener("click", function () {
+          setErr("");
+          var engine = getEngine();
+          if (scanning) return;
+
+          statusMsg.textContent = "카메라를 준비하는 중…";
+          btnStart.disabled = true;
+
+          var config = {
+            fps: 10,
+            qrbox: function (viewfinderWidth, viewfinderHeight) {
+              var minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+              var box = Math.floor(minEdge * 0.72);
+              return { width: box, height: box };
+            },
+          };
+
+          engine
+            .start(
+              { facingMode: "environment" },
+              config,
+              function (decodedText, decodedResult) {
+                setErr("");
+                showResult(decodedText, formatFromResult(decodedResult));
+                statusMsg.textContent = "인식됨. 계속 스캔 중입니다.";
+              },
+              function () {}
+            )
+            .then(function () {
+              scanning = true;
+              btnStop.disabled = false;
+              statusMsg.textContent = "코드를 프레임 안에 맞추세요.";
+            })
+            .catch(function (e) {
+              btnStart.disabled = false;
+              btnStop.disabled = true;
+              scanning = false;
+              var m = e && e.message ? String(e.message) : String(e);
+              if (/HTTPS|secure/i.test(m)) {
+                setErr("카메라는 보안 연결(HTTPS) 또는 localhost에서만 쓸 수 있는 경우가 많습니다.");
+              } else if (/Permission|NotAllowed|denied/i.test(m)) {
+                setErr("카메라 권한이 거부되었습니다. 브라우저 설정에서 이 사이트의 카메라를 허용해 주세요.");
+              } else if (/NotFound|DevicesNotFound|no camera/i.test(m)) {
+                setErr("사용할 수 있는 카메라를 찾지 못했습니다.");
+              } else {
+                setErr("카메라를 시작할 수 없습니다: " + m);
+              }
+              statusMsg.textContent = "카메라를 켜지 못했습니다.";
+            });
+        });
+
+        btnStop.addEventListener("click", function () {
+          if (!html5QrCode || !scanning) return;
+          html5QrCode
+            .stop()
+            .then(function () {
+              scanning = false;
+              btnStart.disabled = false;
+              btnStop.disabled = true;
+              statusMsg.textContent = "카메라가 중지되었습니다.";
+            })
+            .catch(function (e) {
+              scanning = false;
+              btnStart.disabled = false;
+              btnStop.disabled = true;
+              setErr("중지 중 오류: " + (e && e.message ? e.message : e));
+            });
+        });
+
+        function fileScanFailed(e) {
+          var m = e && e.message ? String(e.message) : String(e);
+          setErr("이미지에서 코드를 찾지 못했습니다. (" + m + ")");
+          statusMsg.textContent = "파일 스캔에 실패했습니다.";
+        }
+
+        filePick.addEventListener("change", function () {
+          var f = filePick.files && filePick.files[0];
+          filePick.value = "";
+          if (!f) return;
+          setErr("");
+          statusMsg.textContent = "이미지를 읽는 중…";
+
+          var engine = getEngine();
+
+          function doFileScan() {
+            return engine.scanFile(f, true).then(function (decodedText) {
+              showResult(decodedText, "파일");
+              statusMsg.textContent = "파일에서 읽었습니다.";
+            });
+          }
+
+          if (scanning) {
+            engine.stop().then(
+              function () {
+                scanning = false;
+                btnStart.disabled = false;
+                btnStop.disabled = true;
+                doFileScan().catch(fileScanFailed);
+              },
+              function (stopErr) {
+                scanning = false;
+                btnStart.disabled = false;
+                btnStop.disabled = true;
+                setErr(
+                  "카메라를 먼저 끄지 못했습니다: " +
+                    (stopErr && stopErr.message ? stopErr.message : stopErr)
+                );
+                statusMsg.textContent = "파일 스캔을 건너뜁니다.";
+              }
+            );
+          } else {
+            doFileScan().catch(fileScanFailed);
+          }
+        });
+
+        btnCopy.addEventListener("click", function () {
+          var t = resultOut.value;
+          if (!t) return;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(t).then(
+              function () {
+                statusMsg.textContent = "클립보드에 복사했습니다.";
+              },
+              function () {
+                resultOut.select();
+                document.execCommand("copy");
+                statusMsg.textContent = "복사를 시도했습니다.";
+              }
+            );
+          } else {
+            resultOut.select();
+            document.execCommand("copy");
+            statusMsg.textContent = "복사를 시도했습니다.";
+          }
+        });
+
+        btnClear.addEventListener("click", function () {
+          resultOut.value = "";
+          resultMeta.textContent = "아직 없음";
+          btnCopy.disabled = true;
+          setErr("");
+        });
+      })();
+    </script>
+  </body>
+</html>

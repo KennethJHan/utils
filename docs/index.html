@@ -9,55 +9,95 @@
   <body>
     <div class="page">
       <h1>utils</h1>
-      <p class="lead">브라우저에서 쓰는 작은 도구 모음입니다.</p>
-      <ul class="tool-list">
-        <li>
-          <a href="time-diff/">
-            시간 차 계산기
-            <span class="desc"
-              >YYYY-MM-DD HH:MM:SS 또는 HH:MM:SS 두 시각의 차이 (B − A)</span
-            >
-          </a>
-        </li>
-        <li>
-          <a href="time-convert/">
-            시간 단위 변환
-            <span class="desc">초 ↔ 분·초 ↔ 시·분·초 ↔ 일·시·분·초 (입력 시 서로 자동 맞춤)</span>
-          </a>
-        </li>
-        <li>
-          <a href="percent-change/">
-            퍼센트 증감 계산기
-            <span class="desc"
-              >A → B로 바뀔 때 몇 % 증가·감소인지 ((B − A) ÷ A × 100)</span
-            >
-          </a>
-        </li>
-        <li>
-          <a href="venn-sets/">
-            다집합 Venn
-            <span class="desc"
-              >네 칸에 항목을 넣고(줄 단위), 비어 있지 않은 집합만으로 Venn·영역별 목록</span
-            >
-          </a>
-        </li>
-        <li>
-          <a href="stats-boxplot/">
-            기술 통계 · 박스플롯
-            <span class="desc"
-              >숫자 목록(두 칸) → 요약 통계·박스플롯, 두 그룹이면 Welch t·Mann–Whitney U</span
-            >
-          </a>
-        </li>
-        <li>
-          <a href="barcode-qr/">
-            바코드 · QR 코드
-            <span class="desc"
-              >같은 문자열로 1D 바코드(CODE128·CODE39·EAN-13)와 QR 생성·SVG/PNG 저장</span
-            >
-          </a>
-        </li>
-      </ul>
+      <p class="lead">
+        브라우저에서 쓰는 작은 도구 모음입니다. 아래는 용도별로 나눈 목록입니다.
+      </p>
+
+      <div class="tool-hub">
+        <section class="tool-category" aria-labelledby="cat-time">
+          <h2 class="tool-category__title" id="cat-time">시간</h2>
+          <ul class="tool-list">
+            <li>
+              <a href="time-diff/">
+                시간 차 계산기
+                <span class="desc"
+                  >YYYY-MM-DD HH:MM:SS 또는 HH:MM:SS 두 시각의 차이 (B − A)</span
+                >
+              </a>
+            </li>
+            <li>
+              <a href="time-convert/">
+                시간 단위 변환
+                <span class="desc"
+                  >초 ↔ 분·초 ↔ 시·분·초 ↔ 일·시·분·초 (입력 시 서로 자동 맞춤)</span
+                >
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="tool-category" aria-labelledby="cat-calc">
+          <h2 class="tool-category__title" id="cat-calc">계산</h2>
+          <ul class="tool-list">
+            <li>
+              <a href="percent-change/">
+                퍼센트 증감 계산기
+                <span class="desc"
+                  >A → B로 바뀔 때 몇 % 증가·감소인지 ((B − A) ÷ A × 100)</span
+                >
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="tool-category" aria-labelledby="cat-data">
+          <h2 class="tool-category__title" id="cat-data">
+            데이터 · 시각화
+            <span class="tool-category__hint">집합, 통계, 그래프</span>
+          </h2>
+          <ul class="tool-list">
+            <li>
+              <a href="venn-sets/">
+                다집합 Venn
+                <span class="desc"
+                  >네 칸에 항목을 넣고(줄 단위), 비어 있지 않은 집합만으로 Venn·영역별 목록</span
+                >
+              </a>
+            </li>
+            <li>
+              <a href="stats-boxplot/">
+                기술 통계 · 박스플롯
+                <span class="desc"
+                  >숫자 목록(두 칸) → 요약 통계·박스플롯, 두 그룹이면 Welch t·Mann–Whitney U</span
+                >
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="tool-category" aria-labelledby="cat-code">
+          <h2 class="tool-category__title" id="cat-code">
+            바코드 · QR
+            <span class="tool-category__hint">생성과 스캔</span>
+          </h2>
+          <ul class="tool-list">
+            <li>
+              <a href="barcode-qr/">
+                바코드 · QR 코드
+                <span class="desc"
+                  >같은 문자열로 1D 바코드(CODE128·CODE39·EAN-13)와 QR 생성·SVG/PNG 저장</span
+                >
+              </a>
+            </li>
+            <li>
+              <a href="barcode-scan/">
+                바코드 · QR 스캐너
+                <span class="desc">카메라 실시간 인식 또는 이미지 파일로 QR·1D 바코드 읽기</span>
+              </a>
+            </li>
+          </ul>
+        </section>
+      </div>
     </div>
   </body>
 </html>
