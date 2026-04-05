@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UTF-8 · 이모지 복사 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+    <style>
+      .page--symbols {
+        max-width: 56rem;
+      }
+
+      .symbols-toc {
+        margin: 0 0 1.5rem;
+        padding: 1rem 1.25rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        font-size: 0.875rem;
+      }
+
+      .symbols-toc strong {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .symbols-toc ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 1rem;
+      }
+
+      .symbols-toc a {
+        white-space: nowrap;
+      }
+
+      .symbol-section {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+      }
+
+      .symbol-section:first-of-type {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+      }
+
+      .symbol-section h2 {
+        font-size: 1.0625rem;
+        font-weight: 600;
+        margin: 0 0 0.75rem;
+        scroll-margin-top: 1rem;
+      }
+
+      .symbol-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .symbol-tile {
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+        padding: 0.35rem 0.5rem;
+        font-size: 1.35rem;
+        line-height: 1.2;
+        font-family: system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+          sans-serif;
+        color: var(--text);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 0.12s ease, background 0.12s ease;
+      }
+
+      .symbol-tile:hover {
+        border-color: var(--accent);
+        background: rgba(108, 179, 255, 0.08);
+      }
+
+      .symbol-tile:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(108, 179, 255, 0.25);
+      }
+
+      .symbol-toast {
+        position: fixed;
+        left: 50%;
+        bottom: 1.5rem;
+        transform: translateX(-50%) translateY(120%);
+        padding: 0.6rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--bg);
+        background: var(--accent);
+        border-radius: 8px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+        z-index: 1000;
+      }
+
+      .symbol-toast.is-visible {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page page--symbols">
+      <a class="back" href="../">← 목록</a>
+      <h1>UTF-8 · 이모지 복사</h1>
+      <p class="lead">
+        문자를 누르면 클립보드에 복사됩니다. 자주 쓰는 기호·이모지를 골라 두었습니다.
+      </p>
+
+      <nav class="symbols-toc" id="toc" aria-label="카테고리 목차"></nav>
+      <div id="sections"></div>
+    </div>
+    <div class="symbol-toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (function () {
+        var SECTIONS = [
+          {
+            id: "arrows",
+            title: "화살표 · 방향",
+            items: [
+              "↑",
+              "→",
+              "↓",
+              "←",
+              "↔",
+              "↕",
+              "↖",
+              "↗",
+              "↘",
+              "↙",
+              "⇧",
+              "⇨",
+              "⇩",
+              "⇦",
+              "⇑",
+              "⇓",
+              "⇐",
+              "⇒",
+              "⇔",
+              "↩",
+              "↪",
+              "↶",
+              "↷",
+              "↺",
+              "↻",
+              "⇄",
+              "⇅",
+              "⇆",
+              "⟶",
+              "⟵",
+              "⟷",
+              "⤴",
+              "⤵",
+              "⤶",
+              "⤷",
+              "↰",
+              "↱",
+              "↲",
+              "↳",
+              "↴",
+              "↵",
+              "⌄",
+              "⮕",
+              "⮘",
+            ],
+          },
+          {
+            id: "math",
+            title: "수학 · 논리",
+            items: [
+              "±",
+              "∓",
+              "×",
+              "÷",
+              "·",
+              "√",
+              "∛",
+              "∜",
+              "∞",
+              "∑",
+              "∏",
+              "∫",
+              "∂",
+              "∇",
+              "π",
+              "θ",
+              "λ",
+              "μ",
+              "σ",
+              "Ω",
+              "∅",
+              "∈",
+              "∉",
+              "⊂",
+              "⊃",
+              "∩",
+              "∪",
+              "∧",
+              "∨",
+              "¬",
+              "∀",
+              "∃",
+              "∴",
+              "∵",
+              "≈",
+              "≠",
+              "≡",
+              "≤",
+              "≥",
+              "≪",
+              "≫",
+              "½",
+              "¼",
+              "¾",
+              "°",
+              "′",
+              "″",
+            ],
+          },
+          {
+            id: "marks",
+            title: "체크 · 별 · 구분",
+            items: [
+              "✓",
+              "✔",
+              "✗",
+              "✘",
+              "☑",
+              "☒",
+              "★",
+              "☆",
+              "✦",
+              "✧",
+              "✪",
+              "✫",
+              "✬",
+              "✭",
+              "✮",
+              "✯",
+              "•",
+              "◦",
+              "‣",
+              "⁃",
+              "…",
+              "⋯",
+              "‧",
+              "※",
+              "§",
+              "¶",
+              "†",
+              "‡",
+              "○",
+              "●",
+              "◐",
+              "◑",
+              "◇",
+              "◆",
+              "▪",
+              "▫",
+            ],
+          },
+          {
+            id: "emoji-face",
+            title: "이모지 — 표정",
+            items: [
+              "😀",
+              "😃",
+              "😄",
+              "😁",
+              "😅",
+              "😂",
+              "🤣",
+              "😊",
+              "😇",
+              "🙂",
+              "😉",
+              "😌",
+              "😍",
+              "🥰",
+              "😘",
+              "😋",
+              "😛",
+              "😜",
+              "🤪",
+              "🤑",
+              "🤔",
+              "😐",
+              "😑",
+              "😏",
+              "😒",
+              "🙄",
+              "😬",
+              "😔",
+              "😪",
+              "😴",
+              "😷",
+              "🤒",
+              "🤕",
+              "🥵",
+              "🥶",
+              "😵",
+              "🥳",
+              "😎",
+              "🤓",
+              "😕",
+              "😟",
+              "🙁",
+              "☹️",
+              "😮",
+              "😯",
+              "😲",
+              "😳",
+              "🥺",
+              "😢",
+              "😭",
+              "😤",
+              "😡",
+              "🤬",
+              "😈",
+              "👿",
+              "💀",
+              "🤡",
+              "👻",
+              "👽",
+              "🤖",
+            ],
+          },
+          {
+            id: "emoji-heart",
+            title: "이모지 — 하트 · 감정",
+            items: [
+              "❤️",
+              "🧡",
+              "💛",
+              "💚",
+              "💙",
+              "💜",
+              "🖤",
+              "🤍",
+              "🤎",
+              "💔",
+              "❣️",
+              "💕",
+              "💞",
+              "💓",
+              "💗",
+              "💖",
+              "💘",
+              "💝",
+              "💟",
+              "♥️",
+              "💯",
+              "💢",
+              "💥",
+              "💫",
+              "💦",
+              "💨",
+              "🕳️",
+              "💬",
+              "🗨️",
+              "🗯️",
+              "💭",
+            ],
+          },
+          {
+            id: "emoji-hands",
+            title: "이모지 — 손 · 제스처",
+            items: [
+              "👍",
+              "👎",
+              "👌",
+              "🤌",
+              "✌️",
+              "🤞",
+              "🤟",
+              "🤘",
+              "🤙",
+              "👈",
+              "👉",
+              "👆",
+              "🖕",
+              "👇",
+              "☝️",
+              "👏",
+              "🙌",
+              "🤲",
+              "🤝",
+              "🙏",
+              "✋",
+              "🤚",
+              "🖐️",
+              "✍️",
+              "💪",
+              "🦾",
+              "🖖",
+            ],
+          },
+          {
+            id: "emoji-weather",
+            title: "이모지 — 날씨 · 자연",
+            items: [
+              "☀️",
+              "🌤️",
+              "⛅",
+              "🌥️",
+              "☁️",
+              "🌦️",
+              "🌧️",
+              "⛈️",
+              "🌩️",
+              "🌨️",
+              "❄️",
+              "☃️",
+              "⛄",
+              "🌬️",
+              "💨",
+              "🌪️",
+              "🌈",
+              "☔",
+              "⚡",
+              "🔥",
+              "💧",
+              "🌊",
+              "🌙",
+              "⭐",
+              "🌟",
+              "✨",
+              "🌸",
+              "🌺",
+              "🌻",
+              "🌴",
+              "🌲",
+              "🍄",
+            ],
+          },
+          {
+            id: "emoji-food",
+            title: "이모지 — 음식",
+            items: [
+              "🍎",
+              "🍊",
+              "🍋",
+              "🍌",
+              "🍉",
+              "🍇",
+              "🍓",
+              "🍒",
+              "🍑",
+              "🥭",
+              "🍍",
+              "🥝",
+              "🍅",
+              "🍆",
+              "🥑",
+              "🥦",
+              "🥒",
+              "🌶️",
+              "🫑",
+              "🥕",
+              "🌽",
+              "🥔",
+              "🍞",
+              "🥐",
+              "🧀",
+              "🍖",
+              "🍗",
+              "🥩",
+              "🍔",
+              "🍟",
+              "🍕",
+              "🌮",
+              "🍣",
+              "🍱",
+              "🍚",
+              "🍜",
+              "🍲",
+              "🍦",
+              "☕",
+              "🍵",
+              "🍺",
+              "🥂",
+            ],
+          },
+          {
+            id: "emoji-animal",
+            title: "이모지 — 동물",
+            items: [
+              "🐶",
+              "🐱",
+              "🐭",
+              "🐹",
+              "🐰",
+              "🦊",
+              "🐻",
+              "🐼",
+              "🐨",
+              "🐯",
+              "🦁",
+              "🐮",
+              "🐷",
+              "🐸",
+              "🐵",
+              "🐔",
+              "🐧",
+              "🐦",
+              "🐤",
+              "🦆",
+              "🦅",
+              "🦉",
+              "🐺",
+              "🐗",
+              "🐴",
+              "🦄",
+              "🐝",
+              "🐛",
+              "🦋",
+              "🐌",
+              "🐢",
+              "🐍",
+              "🐙",
+              "🦑",
+              "🐬",
+              "🐳",
+              "🐟",
+            ],
+          },
+          {
+            id: "emoji-activity",
+            title: "이모지 — 활동 · 스포츠",
+            items: [
+              "⚽",
+              "🏀",
+              "🏈",
+              "⚾",
+              "🎾",
+              "🏐",
+              "🏓",
+              "🏸",
+              "🥊",
+              "🎯",
+              "🎮",
+              "🎲",
+              "🎸",
+              "🎹",
+              "🎺",
+              "🎻",
+              "🎤",
+              "🎧",
+              "🎬",
+              "🎨",
+              "🧩",
+              "♟️",
+              "🎳",
+            ],
+          },
+          {
+            id: "emoji-travel",
+            title: "이모지 — 여행 · 장소",
+            items: [
+              "🚗",
+              "🚕",
+              "🚌",
+              "🚎",
+              "🏎️",
+              "🚓",
+              "🚑",
+              "🚒",
+              "🚲",
+              "✈️",
+              "🛫",
+              "🛬",
+              "🚀",
+              "🛸",
+              "🚁",
+              "⛵",
+              "🚢",
+              "🗺️",
+              "🧭",
+              "🏔️",
+              "⛰️",
+              "🌋",
+              "🏕️",
+              "🏖️",
+              "🏝️",
+              "🏠",
+              "🏢",
+              "🏛️",
+              "⛪",
+              "🕌",
+              "🗽",
+              "🗼",
+              "🎡",
+            ],
+          },
+          {
+            id: "emoji-objects",
+            title: "이모지 — 사물 · 기술",
+            items: [
+              "⌚",
+              "📱",
+              "💻",
+              "🖥️",
+              "⌨️",
+              "🖱️",
+              "💾",
+              "💿",
+              "📷",
+              "📹",
+              "📺",
+              "📻",
+              "🔊",
+              "📢",
+              "⏰",
+              "🔋",
+              "🔌",
+              "💡",
+              "🔦",
+              "🧲",
+              "🔧",
+              "🔨",
+              "⚙️",
+              "🧰",
+              "📎",
+              "📌",
+              "📍",
+              "✏️",
+              "✒️",
+              "📝",
+              "📁",
+              "📂",
+              "🗂️",
+              "📊",
+              "📈",
+              "📉",
+            ],
+          },
+        ];
+
+        function codePointLabel(ch) {
+          var s = "";
+          var i = 0;
+          while (i < ch.length) {
+            var c = ch.codePointAt(i);
+            s += (s ? " " : "") + "U+" + c.toString(16).toUpperCase();
+            i += c > 0xffff ? 2 : 1;
+          }
+          return s || ch;
+        }
+
+        function fallbackCopy(text) {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          ta.setSelectionRange(0, text.length);
+          var ok = false;
+          try {
+            ok = document.execCommand("copy");
+          } catch (e) {
+            ok = false;
+          }
+          document.body.removeChild(ta);
+          return ok ? Promise.resolve() : Promise.reject(new Error("copy"));
+        }
+
+        function copyText(text) {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            return navigator.clipboard.writeText(text).catch(function () {
+              return fallbackCopy(text);
+            });
+          }
+          return fallbackCopy(text);
+        }
+
+        var toastEl = document.getElementById("toast");
+        var toastTimer = null;
+
+        function showToast(msg) {
+          toastEl.textContent = msg;
+          toastEl.classList.add("is-visible");
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            toastEl.classList.remove("is-visible");
+            toastTimer = null;
+          }, 1400);
+        }
+
+        function build() {
+          var toc = document.getElementById("toc");
+          var wrap = document.getElementById("sections");
+          var tocUl = document.createElement("ul");
+
+          SECTIONS.forEach(function (sec) {
+            var li = document.createElement("li");
+            var a = document.createElement("a");
+            a.href = "#" + sec.id;
+            a.textContent = sec.title.replace(/^이모지 — /, "");
+            li.appendChild(a);
+            tocUl.appendChild(li);
+
+            var section = document.createElement("section");
+            section.className = "symbol-section";
+            section.setAttribute("aria-labelledby", sec.id);
+
+            var h2 = document.createElement("h2");
+            h2.id = sec.id;
+            h2.textContent = sec.title;
+
+            var grid = document.createElement("div");
+            grid.className = "symbol-grid";
+            grid.setAttribute("role", "group");
+            grid.setAttribute("aria-label", sec.title);
+
+            sec.items.forEach(function (ch) {
+              var btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "symbol-tile";
+              btn.textContent = ch;
+              btn.setAttribute("title", "복사: " + codePointLabel(ch));
+              btn.addEventListener("click", function () {
+                copyText(ch).then(
+                  function () {
+                    showToast("복사됨: " + ch);
+                  },
+                  function () {
+                    showToast("복사에 실패했습니다");
+                  }
+                );
+              });
+              grid.appendChild(btn);
+            });
+
+            section.appendChild(h2);
+            section.appendChild(grid);
+            wrap.appendChild(section);
+          });
+
+          var strong = document.createElement("strong");
+          strong.textContent = "카테고리";
+          toc.appendChild(strong);
+          toc.appendChild(tocUl);
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", build);
+        } else {
+          build();
+        }
+      })();
+    </script>
+  </body>
+</html>

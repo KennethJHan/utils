@@ -15,6 +15,7 @@
 |------|------|
 | [`docs/time-diff/`](docs/time-diff/) | 두 시각의 차이 (B − A), `YYYY-MM-DD HH:MM:SS` 또는 `HH:MM:SS` |
 | [`docs/barcode-qr/`](docs/barcode-qr/) | 1D 바코드(CODE128·CODE39·EAN-13)와 QR 코드 생성·저장 |
+| [`docs/symbols/`](docs/symbols/) | UTF-8 화살표·기호·이모지를 카테고리별로 클릭해 클립보드에 복사 |
 
 ## 로컬에서 미리보기
 
@@ -24,4 +25,4 @@
 cd docs && python3 -m http.server 8080
 ```
 
-브라우저에서 `http://127.0.0.1:8080/` 로 열면 허브 페이지가 보이고, 시간 차 계산기는 `/time-diff/` 입니다.
+브라우저에서 `http://127.0.0.1:8080/` 로 열면 허브 페이지가 보이고, 예: `/time-diff/`, `/symbols/` 입니다.
