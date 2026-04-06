@@ -11,11 +11,19 @@
 
 ## 유틸 목록
 
-| 경로 | 설명 |
-|------|------|
-| [`docs/time-diff/`](docs/time-diff/) | 두 시각의 차이 (B − A), `YYYY-MM-DD HH:MM:SS` 또는 `HH:MM:SS` |
-| [`docs/barcode-qr/`](docs/barcode-qr/) | 1D 바코드(CODE128·CODE39·EAN-13)와 QR 코드 생성·저장 |
-| [`docs/symbols/`](docs/symbols/) | UTF-8 화살표·기호·이모지를 카테고리별로 클릭해 클립보드에 복사 |
+진입 허브는 [`docs/index.html`](docs/index.html)이며, 아래는 용도별 분류와 동일한 순서입니다.
+
+| 분류 | 경로 | 설명 |
+|------|------|------|
+| 시간 | [`docs/time-diff/`](docs/time-diff/) | 두 시각의 차이 (B − A), `YYYY-MM-DD HH:MM:SS` 또는 `HH:MM:SS` |
+| 시간 | [`docs/time-convert/`](docs/time-convert/) | 초 ↔ 분·초 ↔ 시·분·초 ↔ 일·시·분·초 단위 변환 (한쪽 수정 시 나머지 동기화) |
+| 계산 | [`docs/percent-change/`](docs/percent-change/) | A → B로 바뀔 때 몇 % 증가·감소인지 `((B − A) ÷ A × 100)` |
+| 데이터 · 시각화 | [`docs/venn-sets/`](docs/venn-sets/) | 네 칸에 항목을 넣고(줄 단위), 비어 있지 않은 집합만으로 Venn·영역별 목록 |
+| 데이터 · 시각화 | [`docs/stats-boxplot/`](docs/stats-boxplot/) | 숫자 목록(두 칸) → 요약 통계·박스플롯, 두 그룹이면 Welch t·Mann–Whitney U |
+| 데이터 · 시각화 | [`docs/sequence-align/`](docs/sequence-align/) | 두 문자열 전역 정렬(Needleman–Wunsch), 갭·일치 표시·최적 점수 |
+| 텍스트 · 기호 | [`docs/symbols/`](docs/symbols/) | UTF-8 화살표·수학 기호·체크·이모지 등 카테고리별 클릭으로 클립보드 복사 |
+| 바코드 · QR | [`docs/barcode-qr/`](docs/barcode-qr/) | 같은 문자열로 1D 바코드(CODE128·CODE39·EAN-13)와 QR 생성·SVG/PNG 저장 |
+| 바코드 · QR | [`docs/barcode-scan/`](docs/barcode-scan/) | 카메라 실시간 인식 또는 이미지 파일로 QR·1D 바코드 읽기 |
 
 ## 로컬에서 미리보기
 
@@ -25,4 +33,4 @@
 cd docs && python3 -m http.server 8080
 ```
 
-브라우저에서 `http://127.0.0.1:8080/` 로 열면 허브 페이지가 보이고, 예: `/time-diff/`, `/symbols/` 입니다.
+브라우저에서 `http://127.0.0.1:8080/` 로 열면 허브가 보입니다. 예: `/time-diff/`, `/barcode-qr/`, `/symbols/` 등.
