@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>비밀번호 생성기 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+    <style>
+      .len-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .len-row .field {
+        flex: 1 1 8rem;
+        margin: 0;
+      }
+
+      .len-row .field label {
+        margin-bottom: 0.35rem;
+      }
+
+      .len-slider-wrap {
+        flex: 2 1 14rem;
+        min-width: 10rem;
+      }
+
+      .len-slider-wrap label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.35rem;
+        color: var(--muted);
+      }
+
+      input[type="range"].len-range {
+        width: 100%;
+        height: 0.5rem;
+        -webkit-appearance: none;
+        appearance: none;
+        background: var(--border);
+        border-radius: 4px;
+        outline: none;
+      }
+
+      input[type="range"].len-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 1.125rem;
+        height: 1.125rem;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        border: 2px solid var(--bg);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      }
+
+      input[type="range"].len-range::-moz-range-thumb {
+        width: 1.125rem;
+        height: 1.125rem;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        border: 2px solid var(--bg);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      }
+
+      input[type="range"].len-range::-moz-range-track {
+        height: 0.5rem;
+        background: var(--border);
+        border-radius: 4px;
+      }
+
+      .charset-fieldset {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0.85rem 1rem 1rem;
+        margin: 0;
+        background: var(--surface);
+      }
+
+      .charset-fieldset legend {
+        padding: 0 0.35rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--muted);
+      }
+
+      .charset-checks {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .charset-checks label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9375rem;
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .charset-checks input[type="checkbox"] {
+        width: 1.05rem;
+        height: 1.05rem;
+        accent-color: var(--accent);
+      }
+
+      .charset-hint {
+        margin: 0.65rem 0 0;
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+
+      .form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+      }
+
+      button.secondary {
+        padding: 0.65rem 1.25rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        font-family: var(--font);
+        color: var(--text);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      button.secondary:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      button.secondary:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .out-field {
+        margin-top: 1rem;
+      }
+
+      .out-field label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.35rem;
+        color: var(--muted);
+      }
+
+      .out-field input {
+        width: 100%;
+        padding: 0.65rem 0.85rem;
+        font-family: ui-monospace, "Cascadia Code", "Noto Sans Mono", monospace;
+        font-size: 0.9375rem;
+        color: var(--text);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      .out-field input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(108, 179, 255, 0.25);
+      }
+
+      .sr-live {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <a class="back" href="../">← 목록</a>
+      <h1>비밀번호 생성기</h1>
+      <p class="lead">
+        브라우저 안에서만 임시 비밀번호를 만듭니다. <code>crypto.getRandomValues</code>로 난수를
+        뽑으며, 서버로 보내지 않습니다.
+      </p>
+
+      <form class="form" id="form" novalidate>
+        <div class="field">
+          <div class="len-row">
+            <div class="len-slider-wrap">
+              <label for="lenRange">길이 <span id="lenBadge">12</span></label>
+              <input
+                type="range"
+                id="lenRange"
+                class="len-range"
+                min="4"
+                max="128"
+                value="12"
+                aria-valuemin="4"
+                aria-valuemax="128"
+                aria-valuenow="12"
+              />
+            </div>
+            <div class="field">
+              <label for="lenNum">숫자로 입력</label>
+              <input
+                id="lenNum"
+                name="lenNum"
+                type="number"
+                min="4"
+                max="128"
+                value="12"
+                inputmode="numeric"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+          <p class="hint">
+            4~128자. 여러 자리 숫자(예: 12)를 칠 때 1·2처럼 중간 단계가 그대로 유지됩니다. 비워 두고
+            포커스를 빼면 12로 돌아갑니다. 범위 밖이면 「생성」 시 안내합니다.
+          </p>
+        </div>
+
+        <fieldset class="charset-fieldset">
+          <legend>포함할 문자 종류</legend>
+          <div class="charset-checks">
+            <label
+              ><input type="checkbox" id="chkLower" checked /> 영문 소문자 (<code>a-z</code>)</label
+            >
+            <label
+              ><input type="checkbox" id="chkUpper" checked /> 영문 대문자 (<code>A-Z</code>)</label
+            >
+            <label><input type="checkbox" id="chkDigit" checked /> 숫자 (<code>0-9</code>)</label>
+            <label
+              ><input type="checkbox" id="chkSpecial" checked /> 특수문자 (<code
+                >!@#$%^&amp;*-_=+</code
+              >)</label
+            >
+          </div>
+          <p class="charset-hint">
+            공백·따옴표·백틱·역슬래시 등은 일부 사이트에서 문제가 되어 제외했습니다. 최소 한 종류는
+            켜 두어야 합니다.
+          </p>
+        </fieldset>
+
+        <div class="form-actions" style="margin-top: 1.25rem">
+          <button type="submit" class="primary">생성</button>
+          <button type="button" class="secondary" id="copyBtn" disabled>복사</button>
+        </div>
+      </form>
+
+      <p id="error" class="error" hidden></p>
+
+      <div class="out-field">
+        <label for="out">결과</label>
+        <input
+          type="text"
+          id="out"
+          readonly
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+          aria-describedby="liveRegion"
+          placeholder="「생성」을 누르면 여기에 표시됩니다"
+        />
+      </div>
+      <div id="liveRegion" class="sr-live" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <div class="help">
+        <strong>안내</strong>
+        <ul>
+          <li>
+            난수는 <strong>Web Crypto</strong>를 사용합니다. 이 페이지는 비밀번호를 저장하지
+            않습니다(브라우저 저장소 미사용).
+          </li>
+          <li>새로고침하면 결과가 비어 있을 수 있습니다. 중요한 비밀번호는 비밀번호 관리자에 넣는 것을 권장합니다.</li>
+          <li>사이트가 특수문자를 거부하면 특수문자 체크를 끄거나 길이·종류를 조정해 보세요.</li>
+          <li>선택한 문자 종류마다 최소 1글자씩 들어가므로, 길이는 선택한 종류 수 이상이어야 합니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var LOWER = "abcdefghijklmnopqrstuvwxyz";
+        var UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        var DIGITS = "0123456789";
+        var SPECIAL = "!@#$%^&*-_=+";
+
+        var MIN_LEN = 4;
+        var MAX_LEN = 128;
+
+        function randomIntBelow(n) {
+          if (n <= 0) return 0;
+          var buf = new Uint32Array(1);
+          var limit = Math.floor(0x100000000 / n) * n;
+          var x;
+          do {
+            crypto.getRandomValues(buf);
+            x = buf[0];
+          } while (x >= limit);
+          return x % n;
+        }
+
+        function pickCharFrom(pool) {
+          var i = randomIntBelow(pool.length);
+          return pool.charAt(i);
+        }
+
+        function shuffleInPlace(arr) {
+          var i, j, t;
+          for (i = arr.length - 1; i > 0; i--) {
+            j = randomIntBelow(i + 1);
+            t = arr[i];
+            arr[i] = arr[j];
+            arr[j] = t;
+          }
+          return arr;
+        }
+
+        function generatePassword(length, pools) {
+          var full = pools.join("");
+          var chars = [];
+          var p, k;
+          for (k = 0; k < pools.length; k++) {
+            chars.push(pickCharFrom(pools[k]));
+          }
+          while (chars.length < length) {
+            chars.push(pickCharFrom(full));
+          }
+          shuffleInPlace(chars);
+          return chars.join("");
+        }
+
+        var lenRange = document.getElementById("lenRange");
+        var lenNum = document.getElementById("lenNum");
+        var lenBadge = document.getElementById("lenBadge");
+        var chkLower = document.getElementById("chkLower");
+        var chkUpper = document.getElementById("chkUpper");
+        var chkDigit = document.getElementById("chkDigit");
+        var chkSpecial = document.getElementById("chkSpecial");
+        var form = document.getElementById("form");
+        var errorEl = document.getElementById("error");
+        var outEl = document.getElementById("out");
+        var copyBtn = document.getElementById("copyBtn");
+        var liveRegion = document.getElementById("liveRegion");
+
+        function clampLen(v) {
+          var n = parseInt(String(v), 10);
+          if (!Number.isFinite(n)) return MIN_LEN;
+          return Math.min(MAX_LEN, Math.max(MIN_LEN, n));
+        }
+
+        function readLenNumRaw() {
+          var s = lenNum.value;
+          if (s === "" || s === null || typeof s === "undefined") return null;
+          var n = parseInt(String(s), 10);
+          if (!Number.isFinite(n)) return null;
+          return n;
+        }
+
+        function applyValidLength(n) {
+          lenNum.value = String(n);
+          lenRange.value = String(n);
+          lenRange.setAttribute("aria-valuenow", String(n));
+          lenBadge.textContent = String(n);
+        }
+
+        function syncLenFromRange() {
+          var v = clampLen(lenRange.value);
+          lenRange.value = String(v);
+          lenRange.setAttribute("aria-valuenow", String(v));
+          applyValidLength(v);
+        }
+
+        function onLenNumInput() {
+          var n = readLenNumRaw();
+          if (n === null) {
+            lenBadge.textContent = "—";
+            return;
+          }
+          lenBadge.textContent = String(n);
+          if (n >= MIN_LEN && n <= MAX_LEN) {
+            lenRange.value = String(n);
+            lenRange.setAttribute("aria-valuenow", String(n));
+          }
+        }
+
+        function onLenNumCommit() {
+          if (readLenNumRaw() === null) {
+            applyValidLength(12);
+          } else {
+            onLenNumInput();
+          }
+        }
+
+        lenRange.addEventListener("input", syncLenFromRange);
+        lenNum.addEventListener("input", onLenNumInput);
+        lenNum.addEventListener("change", onLenNumCommit);
+        lenNum.addEventListener("blur", onLenNumCommit);
+
+        function setError(msg) {
+          if (msg) {
+            errorEl.textContent = msg;
+            errorEl.hidden = false;
+          } else {
+            errorEl.textContent = "";
+            errorEl.hidden = true;
+          }
+        }
+
+        function activePools() {
+          var pools = [];
+          if (chkLower.checked) pools.push(LOWER);
+          if (chkUpper.checked) pools.push(UPPER);
+          if (chkDigit.checked) pools.push(DIGITS);
+          if (chkSpecial.checked) pools.push(SPECIAL);
+          return pools;
+        }
+
+        function runGenerate() {
+          setError("");
+          liveRegion.textContent = "";
+
+          var pools = activePools();
+          if (pools.length === 0) {
+            setError("문자 종류를 최소 한 가지 이상 선택해 주세요.");
+            return;
+          }
+
+          var rawLen = readLenNumRaw();
+          if (rawLen === null) {
+            setError("길이를 숫자로 입력해 주세요.");
+            return;
+          }
+          if (rawLen < MIN_LEN) {
+            setError(
+              "길이는 최소 " +
+                MIN_LEN +
+                " 이상이어야 합니다. (현재: " +
+                rawLen +
+                ")"
+            );
+            return;
+          }
+          if (rawLen > MAX_LEN) {
+            setError(
+              "길이는 최대 " +
+                MAX_LEN +
+                " 이하여야 합니다. (현재: " +
+                rawLen +
+                ")"
+            );
+            return;
+          }
+
+          var length = rawLen;
+
+          if (length < pools.length) {
+            setError(
+              "길이(" +
+                length +
+                ")가 선택한 문자 종류 수(" +
+                pools.length +
+                ")보다 작습니다. 길이를 늘리거나 종류를 줄여 주세요."
+            );
+            return;
+          }
+
+          if (!window.crypto || !window.crypto.getRandomValues) {
+            setError("이 브라우저에서는 Web Crypto를 쓸 수 없습니다.");
+            return;
+          }
+
+          var pwd = generatePassword(length, pools);
+          outEl.value = pwd;
+          copyBtn.disabled = false;
+          liveRegion.textContent = "비밀번호가 생성되었습니다.";
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          runGenerate();
+        });
+
+        function fallbackCopy(text) {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          ta.setSelectionRange(0, text.length);
+          var ok = false;
+          try {
+            ok = document.execCommand("copy");
+          } catch (err) {
+            ok = false;
+          }
+          document.body.removeChild(ta);
+          return ok ? Promise.resolve() : Promise.reject(new Error("copy"));
+        }
+
+        function copyText(text) {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            return navigator.clipboard.writeText(text).catch(function () {
+              return fallbackCopy(text);
+            });
+          }
+          return fallbackCopy(text);
+        }
+
+        copyBtn.addEventListener("click", function () {
+          var t = outEl.value;
+          if (!t) return;
+          copyText(t).then(
+            function () {
+              liveRegion.textContent = "클립보드에 복사했습니다.";
+            },
+            function () {
+              liveRegion.textContent = "복사에 실패했습니다. 결과 칸에서 직접 선택해 복사해 주세요.";
+            }
+          );
+        });
+
+        outEl.addEventListener("focus", function () {
+          outEl.select();
+        });
+      })();
+    </script>
+  </body>
+</html>
