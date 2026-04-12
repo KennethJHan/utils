@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>연봉·월급·소득세 계산기 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+    <style>
+      .st-purpose {
+        font-size: 0.9375rem;
+        line-height: 1.55;
+        margin: 0 0 1rem;
+        padding: 0.75rem 0.85rem;
+        border-left: 3px solid var(--accent);
+        background: var(--surface);
+        border-radius: 0 var(--radius) var(--radius) 0;
+      }
+      .st-warn {
+        font-size: 0.875rem;
+        color: var(--muted);
+        margin: 0 0 1rem;
+        padding: 0.65rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        line-height: 1.5;
+      }
+      .st-grid {
+        display: grid;
+        gap: 1rem;
+      }
+      @media (min-width: 520px) {
+        .st-grid {
+          grid-template-columns: 1fr 1fr 1fr;
+        }
+      }
+      .st-result {
+        margin-top: 1rem;
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        font-size: 0.9375rem;
+        line-height: 1.55;
+      }
+      .st-result strong {
+        color: var(--text);
+      }
+      .st-result dl {
+        margin: 0.35rem 0 0;
+      }
+      .st-result dt {
+        color: var(--muted);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        margin-top: 0.45rem;
+      }
+      .st-result dd {
+        margin: 0.1rem 0 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .st-ref,
+      .st-avg,
+      .st-hi70 {
+        margin-top: 1.75rem;
+      }
+      .st-ref summary,
+      .st-avg h2,
+      .st-hi70 h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem;
+        color: var(--text);
+      }
+      .st-ref summary {
+        cursor: pointer;
+        color: var(--accent);
+        font-weight: 500;
+        list-style: none;
+      }
+      .st-ref summary::-webkit-details-marker {
+        display: none;
+      }
+      .st-ref .hint,
+      .st-avg .hint,
+      .st-hi70 .hint {
+        margin-top: 0.35rem;
+      }
+      .st-ref table,
+      .st-avg table,
+      .st-hi70 table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+        margin-top: 0.5rem;
+      }
+      .st-ref th,
+      .st-ref td,
+      .st-avg th,
+      .st-avg td,
+      .st-hi70 th,
+      .st-hi70 td {
+        border: 1px solid var(--border);
+        padding: 0.4rem 0.5rem;
+        text-align: left;
+      }
+      .st-ref th,
+      .st-avg th,
+      .st-hi70 th {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .st-avg td,
+      .st-hi70 td {
+        font-variant-numeric: tabular-nums;
+      }
+      .st-avg__actions {
+        margin-top: 0.65rem;
+      }
+      fieldset.st-fieldset {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0.85rem 1rem 1rem;
+        margin: 0 0 1.25rem;
+      }
+      fieldset.st-fieldset legend {
+        padding: 0 0.35rem;
+        font-weight: 600;
+        font-size: 0.9375rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <a class="back" href="../">← 목록</a>
+      <h1>연봉·월급·소득세 계산기</h1>
+
+      <p class="st-purpose">
+        <strong>목적:</strong> 연봉과 세전·세후 월 급여를 서로 빠르게 맞춰 보는 것, 그리고 정부·지자체
+        <strong>생활지원·민생지원</strong> 등에서 말하는 <strong>소득 하위 70%</strong> 판정에 자주 쓰이는
+        <strong>건강보험료 납부액 기준(가구원 수별 커트라인 추정)</strong>을 표로 대조하는 것입니다. (세후
+        급여는 이 페이지의 추정 소득세·지방소득세만 반영하며, 4대보험은 넣지 않습니다.)
+      </p>
+
+      <p class="st-warn">
+        참고용입니다. 실제 원천징수·연말정산, 건강보험료는 가구·소득 유형·재산에 따라 달라집니다. 정책별
+        대상·금액은 <a href="https://www.nhis.or.kr" target="_blank" rel="noopener noreferrer">국민건강보험공단</a>·
+        정부 공식 공지를 확인하세요.
+      </p>
+
+      <form class="form" id="form-quick" novalidate>
+        <fieldset class="st-fieldset">
+          <legend>연봉 · 세전 월급 · 세후 월급</legend>
+          <p class="hint" style="margin-top: 0">
+            <strong>연봉 = 세전 월급 × 12</strong>로 둡니다. 칸 하나만 고치면 나머지가 같은 기준으로
+            맞춰집니다. 세후는 근로소득공제 후 과세표준에 대한
+            <strong>소득세 산출세액</strong>(및 아래 체크 시 지방소득세)만 연 단위로 빼고 12개월로 나눈
+            값입니다.
+          </p>
+          <div class="field" style="margin-top: 0.75rem">
+            <label>
+              <input type="checkbox" id="quickLocalTax" />
+              지방소득세 포함 (산출세액의 10%, 원 미만 절사)
+            </label>
+          </div>
+          <div class="st-grid" style="margin-top: 1rem">
+            <div class="field">
+              <label for="quickAnnual">연봉 (세전 연간, 원)</label>
+              <input
+                id="quickAnnual"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="예: 60000000"
+                data-quick="annual"
+              />
+            </div>
+            <div class="field">
+              <label for="quickPretax">세전 월급 (원)</label>
+              <input
+                id="quickPretax"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="예: 5000000"
+                data-quick="pretax"
+              />
+            </div>
+            <div class="field">
+              <label for="quickPosttax">세후 월급 (원)</label>
+              <input
+                id="quickPosttax"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="추정"
+                data-quick="posttax"
+              />
+            </div>
+          </div>
+          <div id="quickResult" class="st-result" hidden></div>
+        </fieldset>
+      </form>
+
+      <section class="st-avg" aria-labelledby="avg-title">
+        <h2 id="avg-title">대한민국 평균 임금 (참고)</h2>
+        <p class="hint">
+          <strong>통계청</strong> 임금근로자 <strong>월평균 임금(명목), 2024년</strong>:
+          <strong>373만 7천 원</strong>(전체). 성별: 남 439만 8천 원, 여 285만 1천 원. (국가지표체계·통계청
+          보도 기준)
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">구분</th>
+              <th scope="col">세전 월 (원)</th>
+              <th scope="col">연봉 12개월 (원)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">전체 평균 (2024)</th>
+              <td>3,737,000</td>
+              <td>44,844,000</td>
+            </tr>
+            <tr>
+              <th scope="row">남성 평균</th>
+              <td>4,398,000</td>
+              <td>52,776,000</td>
+            </tr>
+            <tr>
+              <th scope="row">여성 평균</th>
+              <td>2,851,000</td>
+              <td>34,212,000</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="hint">
+          월평균 임금은 상여 등을 12로 나눠 반영한 통계청 정의입니다. 아래 버튼은
+          <strong>전체 평균 연봉</strong>을 위 칸에 넣고 세전·세후를 이 도구 기준으로 맞춥니다.
+        </p>
+        <div class="st-avg__actions">
+          <button type="button" class="primary" id="btnLoadAverage">평균 연봉(4,484만 원) 불러오기</button>
+        </div>
+      </section>
+
+      <section class="st-hi70" aria-labelledby="hi70-title">
+        <h2 id="hi70-title">소득 하위 70% · 건강보험료 (참고 표)</h2>
+        <p class="hint">
+          최근 <strong>고유가 피해지원금</strong> 등 일부 지원에서 “소득 하위 70%”를 가구별
+          <strong>건강보험료 납부액</strong>으로 간편 선별하는 방식이 쓰입니다. 아래는 언론·세무 블로그 등에
+          오른 <strong>가구원 수별 월 보험료 추정 상한(직장·지역가입자)</strong> 예시입니다.
+          <strong>최종 기준은 법령·고시 및 건보공단 자료</strong>입니다.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">가구원 수</th>
+              <th scope="col">직장가입자 (월 본인부담 예시, 원 이하)</th>
+              <th scope="col">지역가입자 (월 예시, 원 이하)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">1인</th>
+              <td>138,780</td>
+              <td>68,641</td>
+            </tr>
+            <tr>
+              <th scope="row">2인</th>
+              <td>229,357</td>
+              <td>164,508</td>
+            </tr>
+            <tr>
+              <th scope="row">3인</th>
+              <td>290,169</td>
+              <td>240,352</td>
+            </tr>
+            <tr>
+              <th scope="row">4인</th>
+              <td>360,410</td>
+              <td>322,443</td>
+            </tr>
+            <tr>
+              <th scope="row">5인</th>
+              <td>410,439</td>
+              <td>378,691</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="hint" style="margin-top: 0.5rem">
+          본인 월 납부액이 위 금액 <strong>이하</strong>이면 대상에 가까울 수 있다는 식으로 활용합니다.
+          <strong>The건강보험</strong> 앱·공단 홈페이지에서 실제 납부액을 확인하세요.
+        </p>
+      </section>
+
+      <details class="st-ref" id="details-advanced">
+        <summary>상세: 과세표준 직접 · 세율 구간표</summary>
+        <form class="form" id="form-adv" style="margin-top: 1rem" novalidate>
+          <fieldset class="st-fieldset" style="border-style: dashed">
+            <legend>과세표준 또는 총급여</legend>
+            <div class="field" style="margin: 0.5rem 0">
+              <label>
+                <input type="radio" name="mode" value="taxable" checked />
+                과세표준 직접
+              </label>
+              <label>
+                <input type="radio" name="mode" value="gross" />
+                연간 총급여 → 근로소득공제 후 추정 과세표준
+              </label>
+            </div>
+            <div class="field">
+              <label for="amount" id="label-amount">연간 과세표준 (원)</label>
+              <input
+                id="amount"
+                name="amount"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="예: 50000000"
+              />
+              <p class="hint" id="hint-amount">종합소득 과세표준(원).</p>
+            </div>
+            <div class="field">
+              <label>
+                <input type="checkbox" id="localTax" name="localTax" />
+                지방소득세 포함
+              </label>
+            </div>
+            <button type="submit" class="primary">세액만 계산</button>
+          </fieldset>
+        </form>
+        <p id="error" class="error" hidden></p>
+        <div id="result" class="st-result" hidden></div>
+
+        <p class="hint" style="margin-top: 1rem">과세표준 구간·누진공제 (소득세법 별표, 2023귀속 이후 통상 적용)</p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">과세표준 (이하)</th>
+              <th scope="col">세율</th>
+              <th scope="col">누진공제 (원)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1,400만 원</td>
+              <td>6%</td>
+              <td>0</td>
+            </tr>
+            <tr>
+              <td>5,000만 원</td>
+              <td>15%</td>
+              <td>1,260,000</td>
+            </tr>
+            <tr>
+              <td>8,800만 원</td>
+              <td>24%</td>
+              <td>5,760,000</td>
+            </tr>
+            <tr>
+              <td>1억 5,000만 원</td>
+              <td>35%</td>
+              <td>15,440,000</td>
+            </tr>
+            <tr>
+              <td>3억 원</td>
+              <td>38%</td>
+              <td>19,940,000</td>
+            </tr>
+            <tr>
+              <td>5억 원</td>
+              <td>40%</td>
+              <td>25,940,000</td>
+            </tr>
+            <tr>
+              <td>10억 원</td>
+              <td>42%</td>
+              <td>35,940,000</td>
+            </tr>
+            <tr>
+              <td>10억 원 초과</td>
+              <td>45%</td>
+              <td>65,940,000</td>
+            </tr>
+          </tbody>
+        </table>
+      </details>
+
+      <div class="help">
+        <strong>근로소득공제 (총급여 구간)</strong>
+        <p class="hint" style="margin-top: 0.35rem">국세청 안내와 동일. 공제 한도 <strong>2,000만 원</strong>.</p>
+        <ul>
+          <li>500만 원 이하: 총급여 × 70%</li>
+          <li>500만 원 초과 ~ 1,500만 원 이하: 350만 원 + (총급여 − 500만 원) × 40%</li>
+          <li>1,500만 원 초과 ~ 4,500만 원 이하: 750만 원 + (총급여 − 1,500만 원) × 15%</li>
+          <li>4,500만 원 초과 ~ 1억 원 이하: 1,200만 원 + (총급여 − 4,500만 원) × 5%</li>
+          <li>1억 원 초과: 1,475만 원 + (총급여 − 1억 원) × 2% (한도 적용)</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var TAX_BRACKETS = [
+          { max: 14000000, rate: 6, credit: 0, label: "1,400만 원 이하" },
+          { max: 50000000, rate: 15, credit: 1260000, label: "1,400만 원 초과 ~ 5,000만 원 이하" },
+          { max: 88000000, rate: 24, credit: 5760000, label: "5,000만 원 초과 ~ 8,800만 원 이하" },
+          { max: 150000000, rate: 35, credit: 15440000, label: "8,800만 원 초과 ~ 1억 5,000만 원 이하" },
+          { max: 300000000, rate: 38, credit: 19940000, label: "1억 5,000만 원 초과 ~ 3억 원 이하" },
+          { max: 500000000, rate: 40, credit: 25940000, label: "3억 원 초과 ~ 5억 원 이하" },
+          { max: 1000000000, rate: 42, credit: 35940000, label: "5억 원 초과 ~ 10억 원 이하" },
+          { max: Infinity, rate: 45, credit: 65940000, label: "10억 원 초과" }
+        ];
+        var LABOR_CAP = 20000000;
+        var AVG_ANNUAL = 44844000;
+
+        function laborDeductionFromGross(gross) {
+          var S = Math.max(0, Math.floor(gross));
+          if (S <= 0) return 0;
+          var raw;
+          if (S <= 5000000) raw = S * 0.7;
+          else if (S <= 15000000) raw = 3500000 + (S - 5000000) * 0.4;
+          else if (S <= 45000000) raw = 7500000 + (S - 15000000) * 0.15;
+          else if (S <= 100000000) raw = 12000000 + (S - 45000000) * 0.05;
+          else raw = 14750000 + (S - 100000000) * 0.02;
+          return Math.min(Math.floor(raw), LABOR_CAP);
+        }
+
+        function computeIncomeTax(taxableWon) {
+          var T = Math.max(0, Math.floor(taxableWon));
+          var i;
+          for (i = 0; i < TAX_BRACKETS.length; i++) {
+            if (T <= TAX_BRACKETS[i].max) {
+              var b = TAX_BRACKETS[i];
+              return {
+                tax: Math.max(0, Math.floor((T * b.rate) / 100) - b.credit),
+                bracketLabel: b.label,
+                bracketIndex: i
+              };
+            }
+          }
+          var last = TAX_BRACKETS[TAX_BRACKETS.length - 1];
+          return {
+            tax: Math.max(0, Math.floor((T * last.rate) / 100) - last.credit),
+            bracketLabel: last.label,
+            bracketIndex: TAX_BRACKETS.length - 1
+          };
+        }
+
+        function totalTaxFromGross(gross, includeLocal) {
+          var labor = laborDeductionFromGross(gross);
+          var taxable = Math.max(0, gross - labor);
+          var r = computeIncomeTax(taxable);
+          var local = includeLocal ? Math.floor(r.tax * 0.1) : 0;
+          return {
+            national: r.tax,
+            local: local,
+            total: r.tax + local,
+            laborDed: labor,
+            taxable: taxable,
+            bracketLabel: r.bracketLabel
+          };
+        }
+
+        function parseWon(str) {
+          var s = String(str).trim().replace(/[\s,]/g, "");
+          if (s === "") return NaN;
+          var n = Number(s);
+          return isFinite(n) && n >= 0 ? Math.floor(n) : NaN;
+        }
+
+        function formatWon(n) {
+          return n.toLocaleString("ko-KR") + "원";
+        }
+
+        function netAnnualFromGross(gross, includeLocal) {
+          var t = totalTaxFromGross(gross, includeLocal);
+          return gross - t.total;
+        }
+
+        function netMonthlyFromGross(gross, includeLocal) {
+          return Math.floor(netAnnualFromGross(gross, includeLocal) / 12);
+        }
+
+        /** 최소 연봉 G로 floor((G-tax)/12) >= postMonth (post>0). 범위 부족 시 -1. */
+        function grossForPostTaxMonth(postMonth, includeLocal) {
+          var P = Math.floor(postMonth);
+          if (P <= 0) return 0;
+          var hi = 100000000;
+          while (netMonthlyFromGross(hi, includeLocal) < P && hi < 500000000000) {
+            hi *= 2;
+          }
+          if (netMonthlyFromGross(hi, includeLocal) < P) return -1;
+          var lo = 0;
+          while (lo < hi) {
+            var mid = Math.floor((lo + hi) / 2);
+            if (netMonthlyFromGross(mid, includeLocal) >= P) hi = mid;
+            else lo = mid + 1;
+          }
+          return lo;
+        }
+
+        /* ----- Quick sync ----- */
+        var qLock = false;
+        var quickAnnual = document.getElementById("quickAnnual");
+        var quickPretax = document.getElementById("quickPretax");
+        var quickPosttax = document.getElementById("quickPosttax");
+        var quickLocal = document.getElementById("quickLocalTax");
+        var quickResult = document.getElementById("quickResult");
+
+        function showQuickSummary(gross) {
+          if (!isFinite(gross) || gross <= 0) {
+            quickResult.hidden = true;
+            return;
+          }
+          var incL = quickLocal.checked;
+          var t = totalTaxFromGross(gross, incL);
+          var pre = Math.round(gross / 12);
+          var post = netMonthlyFromGross(gross, incL);
+          var html = "";
+          html += "<p><strong>적용 세율 구간:</strong> " + t.bracketLabel + "</p>";
+          html += "<dl>";
+          html += "<dt>근로소득공제 (추정)</dt><dd>" + formatWon(t.laborDed) + "</dd>";
+          html += "<dt>가정 과세표준</dt><dd>" + formatWon(t.taxable) + "</dd>";
+          html += "<dt>연간 소득세 산출세액</dt><dd>" + formatWon(t.national) + "</dd>";
+          if (incL) html += "<dt>연간 지방소득세</dt><dd>" + formatWon(t.local) + "</dd>";
+          html += "<dt>연간 세금 합계</dt><dd>" + formatWon(t.total) + "</dd>";
+          html += "<dt>환산 세전 월</dt><dd>" + pre.toLocaleString("ko-KR") + "원</dd>";
+          html += "<dt>환산 세후 월 (추정)</dt><dd>" + post.toLocaleString("ko-KR") + "원</dd>";
+          html += "</dl>";
+          quickResult.innerHTML = html;
+          quickResult.hidden = false;
+        }
+
+        function clearQuick() {
+          qLock = true;
+          quickAnnual.value = "";
+          quickPretax.value = "";
+          quickPosttax.value = "";
+          qLock = false;
+          quickResult.hidden = true;
+        }
+
+        function setQuickFields(annual, pretax, posttax) {
+          qLock = true;
+          quickAnnual.value = !isFinite(annual) || annual <= 0 ? "" : String(annual);
+          quickPretax.value = !isFinite(pretax) || pretax <= 0 ? "" : String(pretax);
+          quickPosttax.value = !isFinite(posttax) || posttax < 0 ? "" : String(posttax);
+          qLock = false;
+        }
+
+        function syncQuick(source) {
+          if (qLock) return;
+          var incL = quickLocal.checked;
+          var G;
+          var pre;
+          var post;
+          if (source === "annual") {
+            G = parseWon(quickAnnual.value);
+            if (!isFinite(G)) {
+              clearQuick();
+              return;
+            }
+            pre = Math.round(G / 12);
+            post = netMonthlyFromGross(G, incL);
+            setQuickFields(G, pre, post);
+            showQuickSummary(G);
+            return;
+          }
+          if (source === "pretax") {
+            var M = parseWon(quickPretax.value);
+            if (!isFinite(M)) {
+              clearQuick();
+              return;
+            }
+            G = M * 12;
+            post = netMonthlyFromGross(G, incL);
+            setQuickFields(G, M, post);
+            showQuickSummary(G);
+            return;
+          }
+          if (source === "posttax") {
+            var P = parseWon(quickPosttax.value);
+            if (!isFinite(P)) {
+              clearQuick();
+              return;
+            }
+            G = grossForPostTaxMonth(P, incL);
+            if (G < 0) {
+              quickResult.innerHTML =
+                "<p class=\"error\" style=\"margin:0\">입력한 세후 월급이 이 계산식으로는 맞는 연봉을 찾지 못했습니다. 금액을 확인해 주세요.</p>";
+              quickResult.hidden = false;
+              return;
+            }
+            pre = Math.round(G / 12);
+            post = netMonthlyFromGross(G, incL);
+            setQuickFields(G, pre, post);
+            showQuickSummary(G);
+          }
+        }
+
+        [quickAnnual, quickPretax, quickPosttax].forEach(function (el) {
+          el.addEventListener("input", function () {
+            syncQuick(el.getAttribute("data-quick"));
+          });
+        });
+        quickLocal.addEventListener("change", function () {
+          var a = parseWon(quickAnnual.value);
+          var p = parseWon(quickPretax.value);
+          var po = parseWon(quickPosttax.value);
+          if (isFinite(a) && quickAnnual.value.trim() !== "") syncQuick("annual");
+          else if (isFinite(p) && quickPretax.value.trim() !== "") syncQuick("pretax");
+          else if (isFinite(po) && quickPosttax.value.trim() !== "") syncQuick("posttax");
+        });
+
+        document.getElementById("btnLoadAverage").addEventListener("click", function () {
+          qLock = true;
+          quickAnnual.value = String(AVG_ANNUAL);
+          qLock = false;
+          syncQuick("annual");
+        });
+
+        document.getElementById("form-quick").addEventListener("submit", function (e) {
+          e.preventDefault();
+          syncQuick("annual");
+        });
+
+        /* ----- Advanced form ----- */
+        var formAdv = document.getElementById("form-adv");
+        var errEl = document.getElementById("error");
+        var resEl = document.getElementById("result");
+        var amountEl = document.getElementById("amount");
+        var labelAmount = document.getElementById("label-amount");
+        var hintAmount = document.getElementById("hint-amount");
+        var localTaxEl = document.getElementById("localTax");
+
+        function showError(msg) {
+          errEl.textContent = msg;
+          errEl.hidden = !msg;
+          resEl.hidden = true;
+        }
+
+        function updateAdvLabels() {
+          var gross = document.querySelector('#form-adv input[name="mode"]:checked').value === "gross";
+          if (gross) {
+            labelAmount.textContent = "연간 총급여 (원)";
+            hintAmount.textContent = "근로소득공제 후 금액을 과세표준으로 가정합니다.";
+          } else {
+            labelAmount.textContent = "연간 과세표준 (원)";
+            hintAmount.textContent = "종합소득 과세표준(원).";
+          }
+        }
+
+        function runAdv() {
+          showError("");
+          var mode = document.querySelector('#form-adv input[name="mode"]:checked').value;
+          var raw = parseWon(amountEl.value);
+          if (!isFinite(raw)) {
+            showError("0 이상의 숫자를 입력해 주세요.");
+            return;
+          }
+          var taxable = raw;
+          var laborDed = 0;
+          var gross = raw;
+          if (mode === "gross") {
+            laborDed = laborDeductionFromGross(raw);
+            taxable = Math.max(0, raw - laborDed);
+          }
+          var r = computeIncomeTax(taxable);
+          var local = localTaxEl.checked ? Math.floor(r.tax * 0.1) : 0;
+          var total = r.tax + local;
+          var html = "";
+          html += "<p><strong>적용 세율 구간:</strong> " + r.bracketLabel + "</p>";
+          if (mode === "gross") {
+            html += "<dl>";
+            html += "<dt>총급여</dt><dd>" + formatWon(gross) + "</dd>";
+            html += "<dt>근로소득공제 (추정)</dt><dd>" + formatWon(laborDed) + "</dd>";
+            html += "<dt>근로소득금액 (= 가정 과세표준)</dt><dd>" + formatWon(taxable) + "</dd>";
+            html += "</dl>";
+          } else {
+            html += "<dl><dt>과세표준</dt><dd>" + formatWon(taxable) + "</dd></dl>";
+          }
+          html += "<dl>";
+          html += "<dt>소득세 산출세액</dt><dd>" + formatWon(r.tax) + "</dd>";
+          if (localTaxEl.checked) {
+            html += "<dt>지방소득세</dt><dd>" + formatWon(local) + "</dd>";
+            html += "<dt>합계</dt><dd><strong>" + formatWon(total) + "</strong></dd>";
+          }
+          html += "</dl>";
+          html +=
+            '<p class="hint" style="margin:0.75rem 0 0">원 미만 절사(<code>Math.floor</code>).</p>';
+          resEl.innerHTML = html;
+          resEl.hidden = false;
+        }
+
+        formAdv.addEventListener("submit", function (e) {
+          e.preventDefault();
+          runAdv();
+        });
+        document.querySelectorAll('#form-adv input[name="mode"]').forEach(function (el) {
+          el.addEventListener("change", updateAdvLabels);
+        });
+        updateAdvLabels();
+      })();
+    </script>
+  </body>
+</html>

@@ -19,6 +19,7 @@
 | 시간 | [`docs/time-convert/`](docs/time-convert/) | 초 ↔ 분·초 ↔ 시·분·초 ↔ 일·시·분·초 단위 변환 (한쪽 수정 시 나머지 동기화) |
 | 시간 | [`docs/run-pace/`](docs/run-pace/) | 달리기 km/h ↔ km당 페이스 ↔ 5·10km·하프·풀 예상 완주 시간 상호 변환 |
 | 계산 | [`docs/percent-change/`](docs/percent-change/) | A → B로 바뀔 때 몇 % 증가·감소인지 `((B − A) ÷ A × 100)` |
+| 계산 | [`docs/salary-tax/`](docs/salary-tax/) | 연봉·세전·세후 월급 상호 환산(추정 세액), 통계청 평균 임금·건강보험료 참고, 과세표준 누진 세액 |
 | 데이터 · 시각화 | [`docs/venn-sets/`](docs/venn-sets/) | 네 칸에 항목을 넣고(줄 단위), 비어 있지 않은 집합만으로 Venn·영역별 목록 |
 | 데이터 · 시각화 | [`docs/stats-boxplot/`](docs/stats-boxplot/) | 숫자 목록(두 칸) → 요약 통계·박스플롯, 두 그룹이면 Welch t·Mann–Whitney U |
 | 데이터 · 시각화 | [`docs/sequence-align/`](docs/sequence-align/) | 두 문자열 전역 정렬(Needleman–Wunsch), 갭·일치 표시·최적 점수 |
