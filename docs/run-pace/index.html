@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>달리기 페이스 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+    <style>
+      .rp-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+      }
+      .rp-row .field {
+        flex: 0 1 auto;
+        min-width: 3.5rem;
+      }
+      .rp-sep {
+        padding-bottom: 0.65rem;
+        color: var(--muted);
+        font-weight: 500;
+        user-select: none;
+      }
+      .rp-unit {
+        padding-bottom: 0.65rem;
+        color: var(--muted);
+        font-size: 0.875rem;
+      }
+      .rp-race-grid {
+        display: grid;
+        gap: 1rem;
+      }
+      @media (min-width: 520px) {
+        .rp-race-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .rp-ref {
+        margin-top: 2.25rem;
+      }
+      .rp-ref h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem;
+        color: var(--text);
+      }
+      .rp-ref .rp-ref__sub {
+        font-size: 0.8125rem;
+        color: var(--muted);
+        margin: 0 0 0.65rem;
+      }
+      .rp-ref table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+        margin-bottom: 1.75rem;
+      }
+      .rp-ref th,
+      .rp-ref td {
+        border: 1px solid var(--border);
+        padding: 0.45rem 0.55rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      .rp-ref th {
+        color: var(--muted);
+        font-weight: 500;
+        width: 6.5rem;
+      }
+      .rp-ref td {
+        font-variant-numeric: tabular-nums;
+      }
+      .rp-ref .rp-foot {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin: -0.5rem 0 0;
+        line-height: 1.45;
+      }
+      .rp-ref button.rp-rec {
+        margin: 0;
+        padding: 0;
+        font: inherit;
+        font-variant-numeric: tabular-nums;
+        color: var(--accent);
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 2px;
+      }
+      .rp-ref button.rp-rec:hover {
+        color: var(--accent-hover);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <a class="back" href="../">← 목록</a>
+      <h1>달리기 페이스 계산기</h1>
+      <p class="lead">
+        <strong>속도(km/h)</strong>, <strong>km당 페이스(분·초)</strong>, <strong>거리별 완주 시간</strong> 중 하나를
+        고치면 나머지가 같은 기준으로 맞춰집니다. 마지막으로 수정한 칸이 우선합니다.
+      </p>
+
+      <form class="form" id="form" novalidate>
+        <div class="field">
+          <label for="speedKmh">속도</label>
+          <div class="rp-row" role="group" aria-label="속도 km/h">
+            <div class="field" style="min-width: 6rem">
+              <input
+                id="speedKmh"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="예: 10"
+                data-group="speed"
+              />
+            </div>
+            <span class="rp-unit">km/h</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <span id="label-pace">페이스 (1km당)</span>
+          <div class="rp-row" role="group" aria-labelledby="label-pace">
+            <div class="field">
+              <label for="paceMin" class="hint" style="margin-bottom: 0.35rem">분</label>
+              <input
+                id="paceMin"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="6"
+                data-group="pace"
+              />
+            </div>
+            <span class="rp-sep" aria-hidden="true">:</span>
+            <div class="field">
+              <label for="paceSec" class="hint" style="margin-bottom: 0.35rem">초</label>
+              <input
+                id="paceSec"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="00"
+                data-group="pace"
+              />
+            </div>
+            <span class="rp-unit">/ km</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <span id="label-race">거리별 예상 완주 시간</span>
+          <div class="rp-race-grid" role="group" aria-labelledby="label-race">
+            <div class="field">
+              <label for="time5k">5 km</label>
+              <input
+                id="time5k"
+                type="text"
+                autocomplete="off"
+                placeholder="H:MM:SS 또는 M:SS"
+                data-group="d5"
+              />
+            </div>
+            <div class="field">
+              <label for="time10k">10 km</label>
+              <input
+                id="time10k"
+                type="text"
+                autocomplete="off"
+                placeholder="H:MM:SS 또는 M:SS"
+                data-group="d10"
+              />
+            </div>
+            <div class="field">
+              <label for="timeHalf">하프 (21.0975 km)</label>
+              <input
+                id="timeHalf"
+                type="text"
+                autocomplete="off"
+                placeholder="H:MM:SS 또는 M:SS"
+                data-group="dh"
+              />
+            </div>
+            <div class="field">
+              <label for="timeFull">풀 (42.195 km)</label>
+              <input
+                id="timeFull"
+                type="text"
+                autocomplete="off"
+                placeholder="H:MM:SS 또는 M:SS"
+                data-group="df"
+              />
+            </div>
+          </div>
+          <p class="hint">
+            시간은 <code>H:MM:SS</code>(예: 1:30:00) 또는 1시간 미만만 <code>M:SS</code>(예: 45:00 = 45분)로
+            넣을 수 있습니다.
+          </p>
+        </div>
+      </form>
+
+      <p id="error" class="error" hidden></p>
+
+      <section class="rp-ref" aria-labelledby="ref-world">
+        <h2 id="ref-world">세계 기록 (참고)</h2>
+        <p class="rp-ref__sub">
+          World Athletics가 공인한 야외 트랙(5000m·10000m)·로드(하프·풀) 기준입니다. 시점은 2026년 4월 전후이며,
+          공인·집계 변경 시 실제와 다를 수 있습니다.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">종목</th>
+              <th scope="col">남자</th>
+              <th scope="col">여자</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">5000m (트랙)</th>
+              <td>
+                <button type="button" class="rp-rec" data-group="d5" data-time="12:35.36" title="5km 칸에 넣고 계산">
+                  12:35.36
+                </button>
+                — 조슈아 체프테게이 (우간다), 2020
+              </td>
+              <td>
+                <button type="button" class="rp-rec" data-group="d5" data-time="13:58.06" title="5km 칸에 넣고 계산">
+                  13:58.06
+                </button>
+                — 비트리스 체벳 (케냐), 2025
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">10000m (트랙)</th>
+              <td>
+                <button type="button" class="rp-rec" data-group="d10" data-time="26:11.00" title="10km 칸에 넣고 계산">
+                  26:11.00
+                </button>
+                — 조슈아 체프테게이 (우간다), 2020
+              </td>
+              <td>
+                <button type="button" class="rp-rec" data-group="d10" data-time="28:54.14" title="10km 칸에 넣고 계산">
+                  28:54.14
+                </button>
+                — 비트리스 체벳 (케냐), 2024
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">하프 (로드)</th>
+              <td>
+                <button type="button" class="rp-rec" data-group="dh" data-time="57:20" title="하프 칸에 넣고 계산">
+                  57:20
+                </button>
+                — 제이콥 키플리모 (우간다), 2026·리스본
+              </td>
+              <td>
+                <button type="button" class="rp-rec" data-group="dh" data-time="1:02:52" title="하프 칸에 넣고 계산">
+                  1:02:52
+                </button>
+                — 레테선베트 기데이 (에티오피아), 2021·발렌시아
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">풀 (로드)</th>
+              <td>
+                <button type="button" class="rp-rec" data-group="df" data-time="2:00:35" title="풀 칸에 넣고 계산">
+                  2:00:35
+                </button>
+                — 켈빈 킵툼 (케냐), 2023·시카고
+              </td>
+              <td>
+                혼성
+                <button type="button" class="rp-rec" data-group="df" data-time="2:11:53" title="풀 칸에 넣고 계산">
+                  2:11:53
+                </button>
+                — 티그스트 아세파 (에티오피아), 2023·베를린<br />
+                여자만
+                <button type="button" class="rp-rec" data-group="df" data-time="2:15:50" title="풀 칸에 넣고 계산">
+                  2:15:50
+                </button>
+                — 티그스트 아세파 (에티오피아), 2025·런던
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 id="ref-kr">대한민국 기록 (참고)</h2>
+        <p class="rp-ref__sub">대한육상경기연맹(KAAF) 공인 국가기록(집계 시점에 따라 갱신).</p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">종목</th>
+              <th scope="col">남자</th>
+              <th scope="col">여자</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">5000m (트랙)</th>
+              <td>
+                <button type="button" class="rp-rec" data-group="d5" data-time="13:42.98" title="5km 칸에 넣고 계산">
+                  13:42.98
+                </button>
+                — 백승호, 2010
+              </td>
+              <td>
+                <button type="button" class="rp-rec" data-group="d5" data-time="15:34.17" title="5km 칸에 넣고 계산">
+                  15:34.17
+                </button>
+                — 김도연, 2017
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">10000m (트랙)</th>
+              <td>
+                <button type="button" class="rp-rec" data-group="d10" data-time="28:23.62" title="10km 칸에 넣고 계산">
+                  28:23.62
+                </button>
+                — 전은회, 2010
+              </td>
+              <td>
+                <button type="button" class="rp-rec" data-group="d10" data-time="32:33.61" title="10km 칸에 넣고 계산">
+                  32:33.61
+                </button>
+                — 안슬기, 2018
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">하프 (로드)</th>
+              <td>
+                <button type="button" class="rp-rec" data-group="dh" data-time="1:01:04" title="하프 칸에 넣고 계산">
+                  1:01:04
+                </button>
+                — 이봉주, 1992
+              </td>
+              <td>
+                <button type="button" class="rp-rec" data-group="dh" data-time="1:08:35" title="하프 칸에 넣고 계산">
+                  1:08:35
+                </button>
+                — 최경선, 2020
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">풀 (로드)</th>
+              <td>
+                <button type="button" class="rp-rec" data-group="df" data-time="2:07:20" title="풀 칸에 넣고 계산">
+                  2:07:20
+                </button>
+                — 이봉주, 2000
+              </td>
+              <td>
+                <button type="button" class="rp-rec" data-group="df" data-time="2:25:41" title="풀 칸에 넣고 계산">
+                  2:25:41
+                </button>
+                — 김도연, 2018
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="rp-foot">
+          * 위 5000m·10000m는 <strong>트랙</strong> 종목 공인 기록입니다. 이 페이지의 5km·10km 입력은 도로
+          레이스 등과 혼동하기 쉬우니 참고용으로만 보시면 됩니다. 표의 시간을 누르면 그에 맞는
+          <strong>5km·10km·하프·풀</strong> 거리로만 위 계산기에 반영됩니다.<br />
+          * 하프·풀 세계 기록은 World Athletics 로드 기준, 대한민국 기록은 KAAF 표입니다.
+        </p>
+      </section>
+
+      <div class="help">
+        <strong>거리 정의</strong>
+        <ul>
+          <li>하프 마라톤: 21.0975 km (표준 풀 42.195 km의 절반)</li>
+          <li>풀 마라톤: 42.195 km</li>
+          <li>페이스는 평지·일정 속도 가정이며, 실제 기록과는 다를 수 있습니다.</li>
+          <li>
+            <strong>비우기:</strong> 모든 칸이 비면 빈 폼이 됩니다. 한 그룹만 완전히 비우면(예: 속도·페이스 두 칸·거리
+            시간 칸을 모두 지움) 나머지 입력도 함께 지워집니다. 페이스는 분만 넣고 초를 아직 쓰는 중이거나, 완주
+            시간을 아직 다 입력하지 않은 경우에는 잠시 다른 값을 덮어쓰지 않습니다.
+          </li>
+          <li>
+            아래 <strong>참고 표</strong>에서 파란색으로 밑줄 친 기록 시간을 누르면, 해당 거리(5km·10km·하프·풀) 완주
+            시간으로 위 계산기에 넣고 속도·페이스·다른 거리 시간을 맞춥니다.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var D5 = 5;
+        var D10 = 10;
+        var DH = 21.0975;
+        var DF = 42.195;
+
+        var speedEl = document.getElementById("speedKmh");
+        var paceMinEl = document.getElementById("paceMin");
+        var paceSecEl = document.getElementById("paceSec");
+        var t5El = document.getElementById("time5k");
+        var t10El = document.getElementById("time10k");
+        var thEl = document.getElementById("timeHalf");
+        var tfEl = document.getElementById("timeFull");
+        var errEl = document.getElementById("error");
+
+        var lastGroup = "speed";
+        var lock = false;
+
+        function showError(msg) {
+          errEl.textContent = msg;
+          errEl.hidden = !msg;
+        }
+
+        function parseNum(str) {
+          var s = String(str).trim().replace(/\s+/g, "");
+          if (s === "") return null;
+          var n = Number(s.replace(",", "."));
+          return isFinite(n) ? n : NaN;
+        }
+
+        function pad2(n) {
+          var x = Math.floor(Math.abs(n));
+          return (x < 10 ? "0" : "") + x;
+        }
+
+        function formatHMS(totalSec) {
+          var sec = Math.round(totalSec);
+          if (sec < 0) sec = 0;
+          var h = Math.floor(sec / 3600);
+          var m = Math.floor((sec % 3600) / 60);
+          var s = sec % 60;
+          return h + ":" + pad2(m) + ":" + pad2(s);
+        }
+
+        function formatKmh(kmh) {
+          if (!isFinite(kmh) || kmh <= 0) return "";
+          var t = kmh.toFixed(6).replace(/\.?0+$/, "");
+          return t === "-0" ? "0" : t;
+        }
+
+        /** Returns total seconds or null (empty), NaN stored as null with bad flag via wrapper */
+        function parseRaceTime(str) {
+          var s = String(str).trim();
+          if (s === "") return { empty: true };
+          var parts = s.split(":");
+          for (var i = 0; i < parts.length; i++) {
+            parts[i] = parts[i].trim();
+          }
+          if (parts.length === 1) {
+            var n = parseNum(parts[0]);
+            if (!isFinite(n)) return { bad: true };
+            return { sec: n * 60 };
+          }
+          if (parts.length === 2) {
+            var mi = parseNum(parts[0]);
+            var se = parseNum(parts[1]);
+            if (!isFinite(mi) || !isFinite(se)) return { bad: true };
+            return { sec: mi * 60 + se };
+          }
+          if (parts.length === 3) {
+            var hh = parseNum(parts[0]);
+            var mm = parseNum(parts[1]);
+            var ss = parseNum(parts[2]);
+            if (!isFinite(hh) || !isFinite(mm) || !isFinite(ss)) return { bad: true };
+            return { sec: hh * 3600 + mm * 60 + ss };
+          }
+          return { bad: true };
+        }
+
+        function tryPaceFromSpeed() {
+          var v = parseNum(speedEl.value);
+          if (speedEl.value.trim() === "") return null;
+          if (!isFinite(v) || v <= 0) return { bad: true };
+          return { paceSec: 3600 / v };
+        }
+
+        function tryPaceFromPaceFields() {
+          var a = paceMinEl.value.trim();
+          var b = paceSecEl.value.trim();
+          if (a === "" && b === "") return null;
+          /* 분만 있고 초는 아직 입력 중 → 다른 칸을 덮어쓰지 않음 */
+          if (a !== "" && b === "") return { incomplete: true };
+          var pm = a === "" ? 0 : parseNum(a);
+          var ps = b === "" ? 0 : parseNum(b);
+          if (!isFinite(pm) || !isFinite(ps)) return { bad: true };
+          var sec = pm * 60 + ps;
+          if (sec <= 0) {
+            if ((a === "" || /^0+$/.test(a)) && (b === "" || /^0+$/.test(b))) return null;
+            return { bad: true };
+          }
+          return { paceSec: sec };
+        }
+
+        function tryPaceFromRace(el, distKm) {
+          var raw = el.value.trim();
+          if (raw === "") return null;
+          var r = parseRaceTime(el.value);
+          if (r.empty) return null;
+          if (r.bad) return { incomplete: true };
+          if (r.sec <= 0) return { bad: true };
+          return { paceSec: r.sec / distKm };
+        }
+
+        function tryGroup(g) {
+          if (g === "speed") return tryPaceFromSpeed();
+          if (g === "pace") return tryPaceFromPaceFields();
+          if (g === "d5") return tryPaceFromRace(t5El, D5);
+          if (g === "d10") return tryPaceFromRace(t10El, D10);
+          if (g === "dh") return tryPaceFromRace(thEl, DH);
+          if (g === "df") return tryPaceFromRace(tfEl, DF);
+          return null;
+        }
+
+        function anyFieldHasText() {
+          return (
+            groupHasText("speed") ||
+            groupHasText("pace") ||
+            groupHasText("d5") ||
+            groupHasText("d10") ||
+            groupHasText("dh") ||
+            groupHasText("df")
+          );
+        }
+
+        function groupHasText(g) {
+          if (g === "speed") return speedEl.value.trim() !== "";
+          if (g === "pace") return paceMinEl.value.trim() !== "" || paceSecEl.value.trim() !== "";
+          if (g === "d5") return t5El.value.trim() !== "";
+          if (g === "d10") return t10El.value.trim() !== "";
+          if (g === "dh") return thEl.value.trim() !== "";
+          if (g === "df") return tfEl.value.trim() !== "";
+          return false;
+        }
+
+        function applyFromPaceSec(paceSec) {
+          var paceRounded = Math.round(paceSec);
+          if (paceRounded <= 0) paceRounded = 1;
+          var kmh = 3600 / paceRounded;
+          var pm = Math.floor(paceRounded / 60);
+          var ps = paceRounded - pm * 60;
+          lock = true;
+          speedEl.value = formatKmh(kmh);
+          paceMinEl.value = String(pm);
+          paceSecEl.value = pad2(ps);
+          t5El.value = formatHMS(paceRounded * D5);
+          t10El.value = formatHMS(paceRounded * D10);
+          thEl.value = formatHMS(paceRounded * DH);
+          tfEl.value = formatHMS(paceRounded * DF);
+          lock = false;
+        }
+
+        function clearAll() {
+          lock = true;
+          speedEl.value = "";
+          paceMinEl.value = "";
+          paceSecEl.value = "";
+          t5El.value = "";
+          t10El.value = "";
+          thEl.value = "";
+          tfEl.value = "";
+          lock = false;
+          showError("");
+        }
+
+        function errForGroup(g) {
+          if (g === "speed") return "속도는 0보다 큰 숫자여야 합니다.";
+          if (g === "pace") return "페이스는 분·초를 합쳐 0보다 커야 합니다.";
+          if (g === "d5" || g === "d10" || g === "dh" || g === "df")
+            return "완주 시간 형식을 확인해 주세요. (H:MM:SS 또는 M:SS)";
+          return "입력을 해석할 수 없습니다. 값을 확인해 주세요.";
+        }
+
+        function sync() {
+          if (lock) return;
+          if (!anyFieldHasText()) {
+            clearAll();
+            return;
+          }
+          var tLast = tryGroup(lastGroup);
+          if (tLast === null) {
+            clearAll();
+            return;
+          }
+          if (tLast.incomplete) {
+            showError("");
+            return;
+          }
+          if (tLast.bad) {
+            clearAll();
+            showError(errForGroup(lastGroup));
+            return;
+          }
+          showError("");
+          applyFromPaceSec(tLast.paceSec);
+        }
+
+        function bind(el) {
+          el.addEventListener("input", function () {
+            lastGroup = el.getAttribute("data-group") || lastGroup;
+            sync();
+          });
+        }
+
+        bind(speedEl);
+        bind(paceMinEl);
+        bind(paceSecEl);
+        bind(t5El);
+        bind(t10El);
+        bind(thEl);
+        bind(tfEl);
+
+        var formEl = document.getElementById("form");
+        var refSection = document.querySelector(".rp-ref");
+        var focusByGroup = { d5: t5El, d10: t10El, dh: thEl, df: tfEl };
+
+        function applyRecordFromTable(group, timeStr) {
+          lock = true;
+          speedEl.value = "";
+          paceMinEl.value = "";
+          paceSecEl.value = "";
+          t5El.value = "";
+          t10El.value = "";
+          thEl.value = "";
+          tfEl.value = "";
+          if (group === "d5") t5El.value = timeStr;
+          else if (group === "d10") t10El.value = timeStr;
+          else if (group === "dh") thEl.value = timeStr;
+          else if (group === "df") tfEl.value = timeStr;
+          lastGroup = group;
+          lock = false;
+          sync();
+          var focusEl = focusByGroup[group];
+          if (focusEl) {
+            formEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            focusEl.focus();
+          }
+        }
+
+        if (refSection) {
+          refSection.addEventListener("click", function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest("button.rp-rec") : null;
+            if (!btn || !refSection.contains(btn)) return;
+            var group = btn.getAttribute("data-group");
+            var timeStr = btn.getAttribute("data-time");
+            if (!group || timeStr == null || timeStr === "") return;
+            e.preventDefault();
+            applyRecordFromTable(group, timeStr);
+          });
+        }
+
+        formEl.addEventListener("submit", function (e) {
+          e.preventDefault();
+        });
+
+        sync();
+      })();
+    </script>
+  </body>
+</html>
