@@ -199,7 +199,7 @@
           </div>
           <p class="hint">
             시간은 <code>H:MM:SS</code>(예: 1:30:00) 또는 1시간 미만만 <code>M:SS</code>(예: 45:00 = 45분)로
-            넣을 수 있습니다.
+            넣을 수 있습니다. 입력 중에는 형식이 완성될 때까지 자동 계산을 잠시 기다립니다.
           </p>
         </div>
       </form>
@@ -470,6 +470,12 @@
           return { bad: true };
         }
 
+        function isCompleteRaceTime(str) {
+          var s = String(str).trim();
+          if (s === "") return false;
+          return /^\d+:\d{2}(?:\.\d+)?$/.test(s) || /^\d+:\d{2}:\d{2}(?:\.\d+)?$/.test(s);
+        }
+
         function tryPaceFromSpeed() {
           var v = parseNum(speedEl.value);
           if (speedEl.value.trim() === "") return null;
@@ -497,9 +503,10 @@
         function tryPaceFromRace(el, distKm) {
           var raw = el.value.trim();
           if (raw === "") return null;
+          if (!isCompleteRaceTime(raw)) return { incomplete: true };
           var r = parseRaceTime(el.value);
           if (r.empty) return null;
-          if (r.bad) return { incomplete: true };
+          if (r.bad) return { bad: true };
           if (r.sec <= 0) return { bad: true };
           return { paceSec: r.sec / distKm };
         }
