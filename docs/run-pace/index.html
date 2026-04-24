@@ -199,7 +199,7 @@
           </div>
           <p class="hint">
             시간은 <code>H:MM:SS</code>(예: 1:30:00) 또는 1시간 미만만 <code>M:SS</code>(예: 45:00 = 45분)로
-            넣을 수 있습니다. 입력 중에는 형식이 완성될 때까지 자동 계산을 잠시 기다립니다.
+            넣을 수 있습니다. 완주시간은 입력을 마친 뒤 반영되어, <code>1:00:00</code> 같은 값을 더 자연스럽게 넣을 수 있습니다.
           </p>
         </div>
       </form>
@@ -611,13 +611,28 @@
           });
         }
 
+        function bindRace(el) {
+          el.addEventListener("input", function () {
+            lastGroup = el.getAttribute("data-group") || lastGroup;
+            showError("");
+          });
+          el.addEventListener("blur", function () {
+            lastGroup = el.getAttribute("data-group") || lastGroup;
+            sync();
+          });
+          el.addEventListener("change", function () {
+            lastGroup = el.getAttribute("data-group") || lastGroup;
+            sync();
+          });
+        }
+
         bind(speedEl);
         bind(paceMinEl);
         bind(paceSecEl);
-        bind(t5El);
-        bind(t10El);
-        bind(thEl);
-        bind(tfEl);
+        bindRace(t5El);
+        bindRace(t10El);
+        bindRace(thEl);
+        bindRace(tfEl);
 
         var formEl = document.getElementById("form");
         var refSection = document.querySelector(".rp-ref");
