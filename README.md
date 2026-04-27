@@ -18,6 +18,7 @@
 | 시간 | [`docs/time-diff/`](docs/time-diff/) | 두 시각의 차이 (B − A), `YYYY-MM-DD HH:MM:SS` 또는 `HH:MM:SS` |
 | 시간 | [`docs/time-convert/`](docs/time-convert/) | 초 ↔ 분·초 ↔ 시·분·초 ↔ 일·시·분·초 단위 변환 (한쪽 수정 시 나머지 동기화) |
 | 시간 | [`docs/run-pace/`](docs/run-pace/) | 달리기 km/h ↔ km당 페이스 ↔ 5·10km·하프·풀 예상 완주 시간 상호 변환 |
+| 시간 | [`docs/crontab-generator/`](docs/crontab-generator/) | 분·시·일·월·주 + 커맨드 입력으로 crontab 한 줄 생성 |
 | 계산 | [`docs/percent-change/`](docs/percent-change/) | A → B로 바뀔 때 몇 % 증가·감소인지 `((B − A) ÷ A × 100)` |
 | 계산 | [`docs/salary-tax/`](docs/salary-tax/) | 연봉·세전·세후 월급 상호 환산(추정 세액), 통계청 평균 임금·건강보험료 참고, 과세표준 누진 세액 |
 | 데이터 · 시각화 | [`docs/venn-sets/`](docs/venn-sets/) | 네 칸에 항목을 넣고(줄 단위), 비어 있지 않은 집합만으로 Venn·영역별 목록 |

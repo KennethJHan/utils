@@ -275,7 +275,25 @@ h1 {
   border-radius: 8px;
 }
 
+.field select {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.55rem;
+  font-family: var(--font);
+  font-size: 0.9375rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
 .field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(108, 179, 255, 0.25);
+}
+
+.field select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(108, 179, 255, 0.25);
