@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>신체 지수 계산기 — utils</title>
+    <link rel="stylesheet" href="../common.css" />
+    <style>
+      .bm-grid {
+        display: grid;
+        gap: 1rem;
+      }
+      @media (min-width: 520px) {
+        .bm-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .bm-sex {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 0.15rem;
+      }
+      .bm-sex label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--text);
+        cursor: pointer;
+      }
+      .bm-cards {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+      }
+      .bm-card {
+        margin: 0;
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        font-size: 0.9375rem;
+        line-height: 1.55;
+      }
+      .bm-card__label {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--muted);
+        margin-bottom: 0.25rem;
+      }
+      .bm-card__value {
+        font-family: ui-monospace, "Cascadia Code", "Noto Sans Mono", monospace;
+        font-variant-numeric: tabular-nums;
+        font-size: 1.125rem;
+        font-weight: 600;
+      }
+      .bm-card__meta {
+        display: block;
+        margin-top: 0.35rem;
+        font-size: 0.8125rem;
+        color: var(--muted);
+        font-family: var(--font);
+        font-weight: 400;
+      }
+      .bm-badge {
+        display: inline-block;
+        margin-left: 0.4rem;
+        padding: 0.1rem 0.45rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        font-family: var(--font);
+        color: var(--accent);
+        background: rgba(108, 179, 255, 0.12);
+        border-radius: 6px;
+        vertical-align: middle;
+      }
+      .bm-scale {
+        margin-top: 0.85rem;
+      }
+      .bm-scale__track {
+        position: relative;
+        display: flex;
+        height: 0.75rem;
+        border-radius: 999px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        background: var(--bg);
+      }
+      .bm-scale__seg {
+        min-width: 0;
+      }
+      .bm-scale__seg--under {
+        background: #5b8def;
+      }
+      .bm-scale__seg--normal {
+        background: #3dba7a;
+      }
+      .bm-scale__seg--over {
+        background: #e0b04a;
+      }
+      .bm-scale__seg--ob1 {
+        background: #e08a4a;
+      }
+      .bm-scale__seg--ob2 {
+        background: #e05a4a;
+      }
+      .bm-scale__seg--ob3 {
+        background: #c23b4a;
+      }
+      .bm-scale__marker {
+        position: absolute;
+        top: 50%;
+        width: 0.7rem;
+        height: 0.7rem;
+        margin-left: -0.35rem;
+        margin-top: -0.35rem;
+        border-radius: 50%;
+        background: var(--text);
+        border: 2px solid var(--bg);
+        box-shadow: 0 0 0 1px var(--text);
+        pointer-events: none;
+        z-index: 1;
+      }
+      .bm-scale__ticks {
+        position: relative;
+        height: 1.1rem;
+        margin-top: 0.35rem;
+        font-size: 0.6875rem;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        font-family: ui-monospace, "Cascadia Code", "Noto Sans Mono", monospace;
+      }
+      .bm-scale__ticks span {
+        position: absolute;
+        top: 0;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+      .bm-scale__ticks span:first-child {
+        transform: translateX(0);
+      }
+      .bm-scale__ticks span:last-child {
+        transform: translateX(-100%);
+      }
+      .bm-ranges {
+        margin: 0.75rem 0 0;
+        padding: 0;
+        list-style: none;
+        font-size: 0.8125rem;
+      }
+      .bm-ranges li {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.75rem;
+        padding: 0.4rem 0.5rem;
+        border-radius: 6px;
+        color: var(--muted);
+      }
+      .bm-ranges li + li {
+        margin-top: 0.15rem;
+      }
+      .bm-ranges .bm-ranges__name {
+        font-weight: 500;
+      }
+      .bm-ranges .bm-ranges__span {
+        font-variant-numeric: tabular-nums;
+        font-family: ui-monospace, "Cascadia Code", "Noto Sans Mono", monospace;
+        white-space: nowrap;
+      }
+      .bm-ranges li.is-active {
+        color: var(--text);
+        background: rgba(108, 179, 255, 0.12);
+        outline: 1px solid rgba(108, 179, 255, 0.35);
+      }
+      .bm-ranges li.is-active .bm-ranges__name {
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .bm-tdee {
+        margin: 0.75rem 0 0;
+        padding: 0;
+        list-style: none;
+        font-size: 0.875rem;
+      }
+      .bm-tdee li {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.35rem 0;
+        border-top: 1px solid var(--border);
+        font-variant-numeric: tabular-nums;
+      }
+      .bm-tdee li:first-child {
+        border-top: none;
+        padding-top: 0;
+      }
+      .bm-tdee .muted {
+        color: var(--muted);
+      }
+      .bm-tdee .is-active {
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .bm-warn {
+        font-size: 0.875rem;
+        color: var(--muted);
+        margin: 0 0 1rem;
+        padding: 0.65rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        line-height: 1.5;
+      }
+      code {
+        font-family: ui-monospace, "Cascadia Code", "Noto Sans Mono", monospace;
+        font-size: 0.875em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <a class="back" href="../">← 목록</a>
+      <h1>신체 지수 계산기</h1>
+      <p class="lead">
+        키·몸무게로 BMI와 적정 체중을, 나이·성별·활동량으로 기초대사량(BMR)·일일
+        칼로리(TDEE)를 함께 계산합니다.
+      </p>
+      <p class="bm-warn">
+        참고용 추정값입니다. 의료·영양 상담을 대체하지 않으며, 근육량·체지방·질환
+        등은 반영되지 않습니다.
+      </p>
+
+      <form class="form" id="form" novalidate>
+        <div class="bm-grid">
+          <div class="field">
+            <label for="height">키 (cm)</label>
+            <input
+              id="height"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="예: 170"
+            />
+          </div>
+          <div class="field">
+            <label for="weight">몸무게 (kg)</label>
+            <input
+              id="weight"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="예: 65"
+            />
+          </div>
+          <div class="field">
+            <label for="age">나이 (세)</label>
+            <input
+              id="age"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="예: 30"
+            />
+            <p class="hint">BMR·TDEE에 사용 (BMI만 볼 때는 생략 가능)</p>
+          </div>
+          <div class="field">
+            <span id="sex-label">성별</span>
+            <div class="bm-sex" role="group" aria-labelledby="sex-label">
+              <label
+                ><input type="radio" name="sex" value="male" checked />
+                남성</label
+              >
+              <label
+                ><input type="radio" name="sex" value="female" /> 여성</label
+              >
+            </div>
+            <p class="hint">Mifflin–St Jeor BMR 공식에 사용</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="activity">활동량</label>
+          <select id="activity">
+            <option value="1.2">거의 운동 안 함 (×1.2)</option>
+            <option value="1.375" selected>
+              가벼운 운동 (주 1–3회, ×1.375)
+            </option>
+            <option value="1.55">보통 운동 (주 3–5회, ×1.55)</option>
+            <option value="1.725">강한 운동 (주 6–7회, ×1.725)</option>
+            <option value="1.9">매우 강한 운동·육체노동 (×1.9)</option>
+          </select>
+        </div>
+
+        <button type="submit" class="primary">계산</button>
+      </form>
+
+      <p id="error" class="error" hidden></p>
+      <div id="results" class="bm-cards" hidden></div>
+
+      <div class="help">
+        <strong>계산 기준</strong>
+        <ul>
+          <li>
+            BMI = 체중(kg) ÷ (키(m))² · WHO 구간: 저체중 &lt;18.5, 정상 18.5–24.9,
+            과체중 25–29.9, 1단계 비만 30–34.9, 2단계 비만 35–39.9, 고도비만 ≥40
+          </li>
+          <li>
+            아시아인 참고 구간(WHO 서태평양): 정상 18.5–22.9, 과체중 23–24.9,
+            비만 ≥25
+          </li>
+          <li>
+            적정 체중 범위: BMI 18.5–24.9에 해당하는 체중 (키 기준)
+          </li>
+          <li>
+            BMR (Mifflin–St Jeor): 남
+            <code>10w + 6.25h − 5a + 5</code>, 여
+            <code>10w + 6.25h − 5a − 161</code> (w=kg, h=cm, a=세)
+          </li>
+          <li>TDEE ≈ BMR × 활동 계수</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        function parseNum(str) {
+          var s = String(str).trim().replace(/\s+/g, "").replace(",", ".");
+          if (s === "") return NaN;
+          return Number(s);
+        }
+
+        function fmt(n, digits) {
+          if (!isFinite(n)) return "—";
+          var d = digits == null ? 1 : digits;
+          var s = n.toFixed(d).replace(/\.?0+$/, "");
+          return s === "-0" ? "0" : s;
+        }
+
+        var BMI_RANGES = [
+          { id: "under", label: "저체중", min: 0, max: 18.5, span: "< 18.5", seg: "under" },
+          { id: "normal", label: "정상", min: 18.5, max: 25, span: "18.5 – 24.9", seg: "normal" },
+          { id: "over", label: "과체중", min: 25, max: 30, span: "25.0 – 29.9", seg: "over" },
+          { id: "ob1", label: "1단계 비만", min: 30, max: 35, span: "30.0 – 34.9", seg: "ob1" },
+          { id: "ob2", label: "2단계 비만", min: 35, max: 40, span: "35.0 – 39.9", seg: "ob2" },
+          { id: "ob3", label: "고도비만", min: 40, max: Infinity, span: "≥ 40", seg: "ob3" },
+        ];
+
+        var BMI_SCALE_MIN = 15;
+        var BMI_SCALE_MAX = 45;
+
+        function bmiRangeIndex(bmi) {
+          for (var i = 0; i < BMI_RANGES.length; i += 1) {
+            if (bmi < BMI_RANGES[i].max) return i;
+          }
+          return BMI_RANGES.length - 1;
+        }
+
+        function bmiMarkerPercent(bmi) {
+          var clamped = Math.min(BMI_SCALE_MAX, Math.max(BMI_SCALE_MIN, bmi));
+          return (
+            ((clamped - BMI_SCALE_MIN) / (BMI_SCALE_MAX - BMI_SCALE_MIN)) * 100
+          );
+        }
+
+        function segmentWidthPercent(range) {
+          var lo = Math.max(range.min, BMI_SCALE_MIN);
+          var hi = Math.min(range.max === Infinity ? BMI_SCALE_MAX : range.max, BMI_SCALE_MAX);
+          return ((hi - lo) / (BMI_SCALE_MAX - BMI_SCALE_MIN)) * 100;
+        }
+
+        function renderBmiScale(bmi) {
+          var idx = bmiRangeIndex(bmi);
+          var current = BMI_RANGES[idx];
+          var markerPct = bmiMarkerPercent(bmi);
+
+          var segs = BMI_RANGES.map(function (r) {
+            return (
+              '<span class="bm-scale__seg bm-scale__seg--' +
+              r.seg +
+              '" style="flex:0 0 ' +
+              segmentWidthPercent(r).toFixed(3) +
+              '%" title="' +
+              r.label +
+              " (" +
+              r.span +
+              ')"></span>'
+            );
+          }).join("");
+
+          var list = BMI_RANGES.map(function (r, i) {
+            return (
+              "<li" +
+              (i === idx ? ' class="is-active"' : "") +
+              ">" +
+              '<span class="bm-ranges__name">' +
+              r.label +
+              (i === idx ? " ← 현재" : "") +
+              "</span>" +
+              '<span class="bm-ranges__span">' +
+              r.span +
+              "</span>" +
+              "</li>"
+            );
+          }).join("");
+
+          return (
+            '<div class="bm-card">' +
+            '<span class="bm-card__label">BMI (WHO)</span>' +
+            '<span class="bm-card__value">' +
+            fmt(bmi, 1) +
+            '<span class="bm-badge">' +
+            current.label +
+            "</span></span>" +
+            '<div class="bm-scale" role="img" aria-label="BMI ' +
+            fmt(bmi, 1) +
+            ", " +
+            current.label +
+            '">' +
+            '<div class="bm-scale__track">' +
+            segs +
+            '<span class="bm-scale__marker" style="left:' +
+            markerPct.toFixed(2) +
+            '%"></span>' +
+            "</div>" +
+            '<div class="bm-scale__ticks" aria-hidden="true">' +
+            '<span style="left:0%">15</span>' +
+            '<span style="left:' +
+            bmiMarkerPercent(18.5).toFixed(2) +
+            '%">18.5</span>' +
+            '<span style="left:' +
+            bmiMarkerPercent(25).toFixed(2) +
+            '%">25</span>' +
+            '<span style="left:' +
+            bmiMarkerPercent(30).toFixed(2) +
+            '%">30</span>' +
+            '<span style="left:' +
+            bmiMarkerPercent(35).toFixed(2) +
+            '%">35</span>' +
+            '<span style="left:' +
+            bmiMarkerPercent(40).toFixed(2) +
+            '%">40</span>' +
+            '<span style="left:100%">45</span>' +
+            "</div>" +
+            "</div>" +
+            '<ul class="bm-ranges">' +
+            list +
+            "</ul>" +
+            "</div>"
+          );
+        }
+
+        function sexValue() {
+          var el = document.querySelector('input[name="sex"]:checked');
+          return el ? el.value : "male";
+        }
+
+        function bmrMifflin(weightKg, heightCm, age, sex) {
+          var base = 10 * weightKg + 6.25 * heightCm - 5 * age;
+          return sex === "female" ? base - 161 : base + 5;
+        }
+
+        var ACTIVITY_LABELS = {
+          "1.2": "거의 운동 안 함",
+          "1.375": "가벼운 운동",
+          "1.55": "보통 운동",
+          "1.725": "강한 운동",
+          "1.9": "매우 강한 운동",
+        };
+
+        var form = document.getElementById("form");
+        var errEl = document.getElementById("error");
+        var resultsEl = document.getElementById("results");
+
+        function showError(msg) {
+          errEl.textContent = msg;
+          errEl.hidden = false;
+          resultsEl.hidden = true;
+          resultsEl.innerHTML = "";
+        }
+
+        function run() {
+          var heightCm = parseNum(document.getElementById("height").value);
+          var weightKg = parseNum(document.getElementById("weight").value);
+          var ageRaw = document.getElementById("age").value.trim();
+          var age = ageRaw === "" ? NaN : parseNum(ageRaw);
+          var activity = Number(document.getElementById("activity").value);
+          var sex = sexValue();
+
+          if (!isFinite(heightCm) || heightCm <= 0) {
+            showError("키(cm)를 올바르게 입력하세요.");
+            return;
+          }
+          if (heightCm < 50 || heightCm > 280) {
+            showError("키는 50–280 cm 범위로 입력하세요.");
+            return;
+          }
+          if (!isFinite(weightKg) || weightKg <= 0) {
+            showError("몸무게(kg)를 올바르게 입력하세요.");
+            return;
+          }
+          if (weightKg < 10 || weightKg > 400) {
+            showError("몸무게는 10–400 kg 범위로 입력하세요.");
+            return;
+          }
+
+          var heightM = heightCm / 100;
+          var bmi = weightKg / (heightM * heightM);
+          var idealMin = 18.5 * heightM * heightM;
+          var idealMax = 24.9 * heightM * heightM;
+
+          var html = "";
+          html += renderBmiScale(bmi);
+
+          html +=
+            '<div class="bm-card">' +
+            '<span class="bm-card__label">적정 체중 (BMI 18.5–24.9)</span>' +
+            '<span class="bm-card__value">' +
+            fmt(idealMin, 1) +
+            " – " +
+            fmt(idealMax, 1) +
+            " kg</span>" +
+            '<span class="bm-card__meta">현재 ' +
+            fmt(weightKg, 1) +
+            " kg · 중앙값 근처 " +
+            fmt((idealMin + idealMax) / 2, 1) +
+            " kg</span>" +
+            "</div>";
+
+          if (ageRaw !== "") {
+            if (!isFinite(age) || age < 10 || age > 120) {
+              showError("나이는 10–120세 범위로 입력하세요.");
+              return;
+            }
+            var bmr = bmrMifflin(weightKg, heightCm, age, sex);
+            var selectedTdee = bmr * activity;
+            var factors = ["1.2", "1.375", "1.55", "1.725", "1.9"];
+            var tdeeList = factors
+              .map(function (f) {
+                var mult = Number(f);
+                var kcal = Math.round(bmr * mult);
+                var active = Math.abs(mult - activity) < 1e-9;
+                return (
+                  "<li" +
+                  (active ? ' class="is-active"' : "") +
+                  '><span class="muted">' +
+                  ACTIVITY_LABELS[f] +
+                  "</span><span>" +
+                  kcal +
+                  " kcal</span></li>"
+                );
+              })
+              .join("");
+
+            html +=
+              '<div class="bm-card">' +
+              '<span class="bm-card__label">기초대사량 BMR</span>' +
+              '<span class="bm-card__value">' +
+              Math.round(bmr) +
+              " kcal/일</span>" +
+              '<span class="bm-card__meta">Mifflin–St Jeor · ' +
+              (sex === "female" ? "여성" : "남성") +
+              ", " +
+              Math.round(age) +
+              "세</span>" +
+              "</div>";
+
+            html +=
+              '<div class="bm-card">' +
+              '<span class="bm-card__label">일일 칼로리 TDEE (선택 활동량)</span>' +
+              '<span class="bm-card__value">' +
+              Math.round(selectedTdee) +
+              " kcal/일</span>" +
+              '<span class="bm-card__meta">BMR × ' +
+              activity +
+              "</span>" +
+              '<ul class="bm-tdee">' +
+              tdeeList +
+              "</ul>" +
+              "</div>";
+          } else {
+            html +=
+              '<div class="bm-card">' +
+              '<span class="bm-card__label">BMR · TDEE</span>' +
+              '<span class="bm-card__meta">나이를 입력하면 기초대사량과 활동량별 일일 칼로리를 함께 볼 수 있습니다.</span>' +
+              "</div>";
+          }
+
+          errEl.hidden = true;
+          resultsEl.innerHTML = html;
+          resultsEl.hidden = false;
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          run();
+        });
+      })();
+    </script>
+  </body>
+</html>

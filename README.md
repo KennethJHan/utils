@@ -21,6 +21,7 @@
 | 시간 | [`docs/crontab-generator/`](docs/crontab-generator/) | 분·시·일·월·주 + 커맨드 입력으로 crontab 한 줄 생성 |
 | 계산 | [`docs/percent-change/`](docs/percent-change/) | A → B로 바뀔 때 몇 % 증가·감소인지 `((B − A) ÷ A × 100)` |
 | 계산 | [`docs/salary-tax/`](docs/salary-tax/) | 연봉·세전·세후 월급 상호 환산(추정 세액), 통계청 평균 임금·건강보험료 참고, 과세표준 누진 세액 |
+| 계산 | [`docs/body-metrics/`](docs/body-metrics/) | BMI·적정 체중, Mifflin–St Jeor BMR·활동량별 TDEE(일일 칼로리) 추정 |
 | 데이터 · 시각화 | [`docs/venn-sets/`](docs/venn-sets/) | 네 칸에 항목을 넣고(줄 단위), 비어 있지 않은 집합만으로 Venn·영역별 목록 |
 | 데이터 · 시각화 | [`docs/stats-boxplot/`](docs/stats-boxplot/) | 숫자 목록(두 칸) → 요약 통계·박스플롯, 두 그룹이면 Welch t·Mann–Whitney U |
 | 데이터 · 시각화 | [`docs/sequence-align/`](docs/sequence-align/) | 두 문자열 전역 정렬(Needleman–Wunsch), 갭·일치 표시·최적 점수 |
